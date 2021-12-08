@@ -58,15 +58,21 @@ head(studentDataTraining, 40) %>% kable() %>% kable_styling() %>% scroll_box(wid
 str(studentDataTraining)
 ```
 
-The results of running the training data through the _str()_ function reveal that the dataset consists of **33 _Variables_**, and **2571 _Observations_**. Almost all of the variables are numerical, with the exception of the **Brand.Code** code variable. An other important revelation is that some of the variables contain missing values. In order to figure out how we should deal with these, we will now check to see how many missing variables exist.
+
+The results of running the training data through the _str()_ function reveal that the dataset consists of **33 _Variables_**, and **2571 _Observations_**. Almost all of the variables are numerical, with the exception of the **Brand.Code** variable. An other important revelation is that some of the variables contain missing values. 
+
+In order to figure out how we should deal with these, we will now check to see how many missing variables exist.
+
+\ 
 
 ```{r trainingDataMissing, eval=TRUE, message=FALSE, warning=FALSE}
 # Count the amount of NA values in the dataset.
 colSums(is.na(studentDataTraining))
 ```
 
+\ 
 
-**30** out of **33** variables contain missing values of varying quantities (_ranging from 212 to 1_). This is enough to justify imputation, so rather than removing entire observations with missing values and jeopardizing the accuracy of the data, we will use the **mice** package's _mice()_ function to impute them.
+**30** out of **33** variables contain missing values of varying quantities (_ranging from 212 to 1_). This is enough to justify imputation. Rather than removing entire observations with missing values and jeopardizing the accuracy of the data, we will use the **mice** package's _mice()_ function to impute them.
 
 The mice package offers an array of imputation methods (_Predictive mean matching, mean, norm, to name a few_), but due to the fact that the dataset contains both numeric and categorical variables, we have decided to use the **Predictive mean matching** method as this covers both variable types.
 
@@ -78,12 +84,34 @@ studentDataTraining <- mice(studentDataTraining, m = 1, method = 'pmm', print = 
 colSums(is.na(studentDataTraining))
 ```
 
+
 As per the above results, we can confirm that the missing values have been eliminated after imputation.
 
+\ 
+
+#### Test Dataset
+
+We will now perform the same inspections/conversions on the test dataset. 
 
 ```{r testgDataStructure, eval=TRUE, message=FALSE, warning=FALSE}
 # Take a look at the structure of the training dataset.
 head(studentEvaluationTest, 40) %>% kable() %>% kable_styling() %>% scroll_box(width = '100%', height = '600px')
+```
+
+
+```{r testDataMeta, eval=TRUE, message=FALSE, warning=FALSE}
+str(studentEvaluationTest)
+```
+
+
+The above results reveal that the dataset consists of **33 _Variables_**, and **267 _Observations_**. Again, some of the variables contain missing values, and so we will impute these using the **_mice()_** funtion and the **Predictive mean matching** method.
+
+```{r testDataImputation, eval=TRUE, message=FALSE, warning=FALSE}
+# Impute missing values using the Predictive mean matching imputation method.
+studentEvaluationTest <- mice(studentEvaluationTest, m = 1, method = 'pmm', print = FALSE) %>% complete()
+
+# After imputation, check if any missing values remain.
+colSums(is.na(studentEvaluationTest))
 ```
 
 
