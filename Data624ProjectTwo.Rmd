@@ -16,6 +16,21 @@ library(lubridate)
 library(Hmisc)
 library(ggplot2)
 library(ggthemes)
+require(readxl)
+require(skimr)
+require(dplyr)
+require(naniar)
+require(caret)
+require(corrplot)
+require(DataExplorer)
+require(VIM)
+require(usdm)
+require(tidyr)
+require(kableExtra)
+require(tidyverse)
+require(AppliedPredictiveModeling)
+require(psych)
+require(cowplot)
 library(mice)
 library(inspectdf)
 
@@ -34,17 +49,30 @@ Please submit both Rpubs links and .rmd files or other readable formats for tech
 
 ### Data Importation
 
-```{r dataImport, eval=TRUE, message=FALSE, warning=FALSE}
-# Import the StudentData CSV file.
-studentDataTraining <- read.csv('./data/StudentData.csv', stringsAsFactors = FALSE)
+There are two files provided:
+1) StudentData.xlsx: This is the training dataset. Note the PH column will be our target we are trying to predict.
+2) StudentEvaluation.xlsx: This is the evaluation dataset. Note the PH column is empty in this dataset.
 
-# Import the StudentEvaluation CSV file.
-studentEvaluationTest <- read.csv('./data/StudentEvaluation.csv', stringsAsFactors = FALSE)
+```{r dataImport, eval=TRUE, message=FALSE, warning=FALSE}
+
+# Load ABC Beverages train and evaluation datasets.
+beverage.train <- read.csv('./data/StudentData.csv', na.strings = c('', 'NA'), stringsAsFactors = FALSE)
+
+beverage.test <- read.csv('./data/StudentEvaluation.csv', na.strings = c('', 'NA'), stringsAsFactors = FALSE)
+
 ```
 
 \ 
 
-### Data Exploration and Cleansing
+
+```{r loadData, echo=FALSE, message=FALSE, warning=FALSE}
+
+# remove the empty PH column from the evaluation data
+beverage.test<-beverage.test%>%dplyr::select(-PH)
+
+```
+
+### Data Exploration
 
 #### Training Dataset
 
@@ -52,11 +80,11 @@ Firstly, we will take a look at the first few observations in the dataset so we 
 
 ```{r trainingDataStructure, eval=TRUE, message=FALSE, warning=FALSE}
 # Take a look at the structure of the training dataset.
-head(studentDataTraining, 40) %>% kable() %>% kable_styling() %>% scroll_box(width = '100%', height = '600px')
+head(beverage.train, 40) %>% kable() %>% kable_styling() %>% scroll_box(width = '100%', height = '600px')
 ```
 
 ```{r trainingDataMeta, eval=TRUE, message=FALSE, warning=FALSE}
-str(studentDataTraining)
+str(beverage.train)
 ```
 
 
@@ -65,10 +93,287 @@ The results of running the training data through the _str()_ function reveal tha
 In order to figure out how we should deal with the missing variables, we will now check to see how many missing variables exist.
 
 \ 
+ 
+
+#### Test Dataset
+
+We will now perform the same inspections/conversions on the test dataset. 
+
+```{r testgDataStructure, eval=TRUE, message=FALSE, warning=FALSE}
+# Take a look at the structure of the test dataset.
+head(beverage.test, 40) %>% kable() %>% kable_styling() %>% scroll_box(width = '100%', height = '600px')
+```
+
+
+The training dataset contains 32 predictor variables which include 1 categorical variable and the rest are numeric (continuous and discrete) variables. There are 2571 records in the training data and 267 records in the evaluation dataset. The target column is PH. 
+
+The data has the following variables: 
+
+Brand Code: categorical, values: A, B, C, D
+Carb Volume:
+Fill Ounces:
+PC Volume:
+Carb Pressure:
+Carb Temp:
+PSC:
+PSC Fill:
+PSC CO2:
+Mnf Flow:
+Carb Pressure1:
+Fill Pressure:
+Hyd Pressure1:
+Hyd Pressure2:
+Hyd Pressure3:
+Hyd Pressure4:
+Filler Level:
+Filler Speed:
+Temperature:
+Usage cont:
+Carb Flow:
+Density:
+MFR:
+Balling:
+Pressure Vacuum:
+PH: This is the TARGET variable that we will try to predict.
+Bowl Setpoint:
+Pressure Setpoint:
+Air Pressurer:
+Alch Rel:
+Carb Rel:
+Balling Lvl:
+
+
+Now let's check the summary statistics for the data.
+
+
+```{r checkSummaryStats, echo=FALSE, message=FALSE, warning=FALSE}
+
+summary(beverage.train)
+
+```
+
+
+
+```{r inspectData,echo=FALSE, message=FALSE, warning=FALSE}
+#glimpse(beverage.train)
+#dim(beverage.train)
+#describe(beverage.train)
+introduce(beverage.train)
+
+```
+
+
+
+```{r dataSummary, echo=FALSE, message=FALSE, warning=FALSE}
+# Display summary statistics
+skim(beverage.train)
+```
+
+
+```{r ,echo=FALSE, message=FALSE, warning=FALSE}
+
+#DataExplorer::plot_histogram(beverage.train)
+
+```
+
+
+From the above, we see that most of the predictors (except for 2) have some missing data. So these would need to be imputed.
+For the target variable (PH), we see that 4 rows are missing this "PH" value. These rows will need to be dropped since they cannot be used for training. 
+
+Let's look at the distribution of the target variable next.
+
+```{r checkTargetVariable, echo=FALSE, message=FALSE, warning=FALSE}
+#plot histogram of PH
+hist(beverage.train$PH)
+
+```
+
+From the above, we can see that the target variable is not very skewed, even though there are some outliers.
+
+
+```{r checkMissingData, echo=FALSE, message=FALSE, warning=FALSE}
+# Check missing data
+knitr::kable(miss_var_summary(beverage.train), 
+             caption = 'Missing Values',
+             format="html", 
+             table.attr="style='width:50%;'") %>% 
+  kableExtra::kable_styling()
+gg_miss_var(beverage.train)
+gg_miss_upset(beverage.train)
+```
+
+From the above, we can see that about 8.25% of the records are missing a value for `MFR`. We may need to drop this feature since as missingness increases, the increasing amount of imputed values would have potential negative consequences. 
+The second most missing variable is the categorical variable called "Brand Code", which is missing about 4.67% percent of its values. These could potentially be a 5th brand besides the existing A,B,C and D or could be one of the existing 4 brands. In any case, we will create a new feature category 'Unknown' for these records. The rest of the predictors are missing smaller percentages of values, and we can use KNN imputation for these records. 
+
+
+```{r plotPredictors, fig.height = 10, fig.width = 10, echo=FALSE}
+# Prepare data for plotting predictors
+beverage_df<-beverage.train%>%drop_na()%>%dplyr::select(-c(PH, 'Brand.Code'))%>%gather(key = 'variable', value = 'value')
+
+# Plot histogram for each predictor
+ggplot(beverage_df)+geom_histogram(aes(x=value, y = ..density..), bins=30)+geom_density(aes(x=value), color='red')+facet_wrap(. ~variable, scales='free', ncol=4)
+
+```
+
+From the above plots, we can see that a lot of the predictors are significantly skewed, suggesting that we might need to transform the data. Several features are discrete with limited possible values, e.g. `Pressure Setpoint`. We also see a number of bimodal variables such as `Carb Flow`, `Balling`, and `Balling Level`.
+
+
+### Boxplots
+
+We now use boxplots to check the spread of each predictor.
+
+```{r plotBoxplots, fig.height = 10, fig.width = 10, echo=FALSE}
+# Prepare data for boxplots
+beverage_df <- beverage.train %>% 
+  dplyr::select(-c(PH, 'Brand.Code'))%>%tidyr::drop_na() %>%
+  gather(key = 'variable', value = 'value')
+
+# Plot boxplots for each predictor
+beverage_df %>% ggplot() + 
+  geom_boxplot(aes(x=variable, y=value)) + 
+  facet_wrap(. ~variable, scales='free', ncol=6)
+```
+
+The boxplots reveal outliers, but we don't have have a strong reason to impute or drop them from the dataset. 
+
+### Predictor-Target Correlations
+
+```{r retainNumericPredictors, echo=FALSE, message=FALSE, warning=FALSE}
+
+beverage_features<-beverage.train%>%dplyr::select(-c('Brand.Code'))
+beverage_features<-beverage_features%>%drop_na
+
+num_predictors<-ncol(beverage_features) - 1
+
+```
+
+
+We now derive the correlations for the numeric predictors. This would enable us to focus on those predictors that show stronger positive or negative correlations with `PH`. Predictors with correlations closer to zero will likely not provide any meaningful information for the target variable.
+
+```{r calculateCorrelations, echo=FALSE, message=FALSE, warning=FALSE}
+
+# Show feature correlations/target by decreasing correlation
+stack(sort(cor(beverage_features[, num_predictors + 1], beverage_features[,1:num_predictors])[,],decreasing=TRUE))
+```
+
+From the above, we can see that the variables `Bowl Setpoint`, `Filler Level`, `Carb Flow`, `Pressure Vacuum`, and `Carb Rel` have the strongest positive correlations with `PH`, while `Mnf Flow`, `Usage cont`, `Fill Pressure`, `Pressure Setpoint`, and `Hyd Pressure3` have the strongest negative correlations with `PH`. The other features have a weak or slightly negative correlation, which implies they have less predictive power.
+
+### Multicollinearity
+
+One problem that can occur with multiple regression is a correlation between predictors or multicollinearity. A quick check is to run correlations between all predictors.
+
+
+```{r plotCorrelations, echo=FALSE, fig.height=8, fig.width=10 }
+
+# plot pairwise correlations between Predictors
+
+corr.bev<-cor(beverage_features, use = "pairwise.complete.obs", method='pearson')
+  
+corrplot(corr.bev, method="color", type="lower", tl.col = "black", tl.srt = 5)
+
+#corrplot(corr.bev, method = "color",type = "upper", order = "original", number.cex = .6,addCoef.col = "black", tl.srt = 90, diag = TRUE)
+```
+
+We can see that some predictors are highly correlated with one another, such as `Balling Level` and `Carb Volume`, `Carb Rel`, `Alch Rel`, `Density`, and `Balling`, with a correlation between 0.75 and 1. When we start examining predictors for our models, we'll have to consider the correlations between them and avoid including pairs with strong correlations.
+
+In general, it looks like many of the predictors go hand-in-hand with other features and multicollinearity will be a problem.
+
+
+```{r ,echo=FALSE, message=FALSE, warning=FALSE}
+#vifcor(beverage_features) 
+
+```
+
+### Near-Zero Variance Predictors
+
+Lastly, we want to check for any features that show near zero-variance. Predictors that are the same across most of the instances will add little predictive information.
+
+```{r checkZeroVar, echo=FALSE, message=FALSE, warning=FALSE}
+nzv<-nearZeroVar(beverage.train, saveMetrics= TRUE)
+nzv[nzv$nzv,][1:5,]%>%drop_na()
+
+#str(nzv, vec.len = 2)
+```
+
+Since "Hyd Pressure1" displays near-zero variance, we will drop this feature prior to modeling.
+
+
+## 2. Data Preparation
+
+To summarize our data preparation and exploration, we distinguish our findings into a few categories below.
+
+### Removed Fields
+
+-   `MFR` has more than 8% missing values, so we can remove this predictor.
+-   `Hyd Pressure1` shows little variance, so we can remove this predictor.
+
+```{r removeTwoVariablesWithMissingData, echo=FALSE, message=FALSE, warning=FALSE}
+# Remove the 2 fields from our training data
+beverage.train.clean<-beverage.train%>%dplyr::select(-c(MFR, 'Hyd.Pressure1'))
+
+# Remove the 2 fields from our evaluation data
+beverage.test.clean<-beverage.test%>%dplyr::select(-c(MFR, 'Hyd.Pressure1'))
+```
+
+
+### Imputing Missing Values
+
+In order to fill missing data, knn Imputation will be used. 
+
+```{r imputeMissingData, echo=FALSE, message=FALSE, warning=FALSE}
+
+#result<-preProcess(beverage.train.clean, method = c("knnImpute"), k = 10)
+#beverage.train.clean<-predict(result, beverage.train.clean)
+
+```
+
+-   We had 4 rows with missing `PH` that need to be removed.
+-   We replace missing values for `Brand Code` with "Unknown".
+-   Impute remaining missing values using `kNN()` from the `VIM` package
+-   We then impute remaining missing values using `kNN()` from the `VIM` package.
+
+```{r removeRowsWithMissingTarget, echo=FALSE, message=FALSE, warning=FALSE}
+
+set.seed(200)
+# drop rows with missing PH
+beverage.train.clean<-beverage.train.clean %>%filter(!is.na(PH))
+
+```
+
+
+```{r convertMissingBrandCode, echo=FALSE, message=FALSE, warning=FALSE}
+
+set.seed(200)
+# Change Brand Code missing to 'Unknown' in our training data
+brand_code<-beverage.train.clean %>%dplyr::select('Brand.Code')%>%replace_na(list('Brand.Code' = 'Unknown'))
+
+beverage.train.clean$'Brand.Code'<-brand_code$'Brand.Code'
+
+# Change Brand Code missing to 'Unknown' in our evaluation data
+brand_code<-beverage.test.clean %>%dplyr::select('Brand.Code') %>%replace_na(list('Brand.Code' = 'Unknown'))
+
+beverage.test.clean$'Brand.Code'<-beverage.test.clean$'Brand.Code'
+
+```
+
+
+
+```{r}
+
+set.seed(200)
+
+# Use the kNN method from VIM package to impute missing values in our training data
+beverage.train.clean<-beverage.train.clean %>% kNN(k=10) %>% dplyr::select(colnames(beverage.train.clean))
+
+# Use the kNN method from VIM package to impute missing values in our evaluation data
+beverage.test.clean<-beverage.test.clean%>% kNN(k=10) %>%dplyr::select(colnames(beverage.test.clean))
+
+```
+
 
 ```{r trainingDataMissing, eval=TRUE, message=FALSE, warning=FALSE}
 # Count the amount of NA values in the dataset.
-colSums(is.na(studentDataTraining))
+colSums(is.na(beverage.train))
 ```
 
 \ 
@@ -79,25 +384,128 @@ The mice package offers an array of imputation methods (_Predictive mean matchin
 
 ```{r trainingDataImputation, eval=TRUE, message=FALSE, warning=FALSE}
 # Impute missing values using the Predictive mean matching imputation method.
-studentDataTraining <- mice(studentDataTraining, m = 1, method = 'pmm', print = FALSE) %>% complete()
+beverage.train.clean<-mice(beverage.train.clean, m = 1, method = 'pmm', print = FALSE) %>% complete()
 
 # After imputation, check if any missing values remain.
-colSums(is.na(studentDataTraining))
+colSums(is.na(beverage.train.clean))
 ```
-
 
 As per the above results, we can confirm that the missing values have been eliminated after imputation.
 
-\ 
 
-#### Test Dataset
+```{r recheckMissingValues,echo=FALSE, message=FALSE, warning=FALSE}
 
-We will now perform the same inspections/conversions on the test dataset. 
+# Re-check if any missing values
+plot_missing(beverage.train.clean)
 
-```{r testgDataStructure, eval=TRUE, message=FALSE, warning=FALSE}
-# Take a look at the structure of the training dataset.
-head(studentEvaluationTest, 40) %>% kable() %>% kable_styling() %>% scroll_box(width = '100%', height = '600px')
+plot_missing(beverage.test.clean)
+
 ```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 ```{r testDataMeta, eval=TRUE, message=FALSE, warning=FALSE}
