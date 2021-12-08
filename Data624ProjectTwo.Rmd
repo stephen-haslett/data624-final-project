@@ -16,6 +16,7 @@ library(lubridate)
 library(Hmisc)
 library(ggplot2)
 library(ggthemes)
+library(mice)
 
 # Disable scientific numbers for readability purposes.
 options(scipen = 999)
@@ -34,20 +35,50 @@ Please submit both Rpubs links and .rmd files or other readable formats for tech
 
 ```{r dataImport, eval=TRUE, message=FALSE, warning=FALSE}
 # Import the StudentData CSV file.
-studentDataTraining <- read.csv('./data/StudentData.csv', na.strings = c('', 'NA'), stringsAsFactors = FALSE)
+studentDataTraining <- read.csv('./data/StudentData.csv', stringsAsFactors = FALSE)
 
 # Import the StudentEvaluation CSV file.
-studentEvaluationTest <- read.csv('./data/StudentEvaluation.csv', na.strings = c('', 'NA'), stringsAsFactors = FALSE)
+studentEvaluationTest <- read.csv('./data/StudentEvaluation.csv', stringsAsFactors = FALSE)
 ```
 
 \ 
 
 ### Data Exploration and Cleansing
 
+#### Training Dataset
+
+Firstly, we will take a look at the first few observations in the dataset so we can get a feel for the data. We will then explore the structure of the data using the _str()_ function which will tell us how many observations and variables it contains, and whether or not it contains missing values.
+
 ```{r trainingDataStructure, eval=TRUE, message=FALSE, warning=FALSE}
 # Take a look at the structure of the training dataset.
 head(studentDataTraining, 40) %>% kable() %>% kable_styling() %>% scroll_box(width = '100%', height = '600px')
 ```
+
+```{r trainingDataMeta, eval=TRUE, message=FALSE, warning=FALSE}
+str(studentDataTraining)
+```
+
+The results of running the training data through the _str()_ function reveal that the dataset consists of **33 _Variables_**, and **2571 _Observations_**. Almost all of the variables are numerical, with the exception of the **Brand.Code** code variable. An other important revelation is that some of the variables contain missing values. In order to figure out how we should deal with these, we will now check to see how many missing variables exist.
+
+```{r trainingDataMissing, eval=TRUE, message=FALSE, warning=FALSE}
+# Count the amount of NA values in the dataset.
+colSums(is.na(studentDataTraining))
+```
+
+
+**30** out of **33** variables contain missing values of varying quantities (_ranging from 212 to 1_). This is enough to justify imputation, so rather than removing entire observations with missing values and jeopardizing the accuracy of the data, we will use the **mice** package's _mice()_ function to impute them.
+
+The mice package offers an array of imputation methods (_Predictive mean matching, mean, norm, to name a few_), but due to the fact that the dataset contains both numeric and categorical variables, we have decided to use the **Predictive mean matching** method as this covers both variable types.
+
+```{r trainingDataImputation, eval=TRUE, message=FALSE, warning=FALSE}
+# Impute missing values using the Predictive mean matching imputation method.
+studentDataTraining <- mice(studentDataTraining, m = 1, method = 'pmm', print = FALSE) %>% complete()
+
+# After imputation, check if any missing values remain.
+colSums(is.na(studentDataTraining))
+```
+
+As per the above results, we can confirm that the missing values have been eliminated after imputation.
 
 
 ```{r testgDataStructure, eval=TRUE, message=FALSE, warning=FALSE}
