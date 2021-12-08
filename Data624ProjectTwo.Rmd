@@ -17,6 +17,7 @@ library(Hmisc)
 library(ggplot2)
 library(ggthemes)
 library(mice)
+library(inspectdf)
 
 # Disable scientific numbers for readability purposes.
 options(scipen = 999)
@@ -59,9 +60,9 @@ str(studentDataTraining)
 ```
 
 
-The results of running the training data through the _str()_ function reveal that the dataset consists of **33 _Variables_**, and **2571 _Observations_**. Almost all of the variables are numerical, with the exception of the **Brand.Code** variable. An other important revelation is that some of the variables contain missing values. 
+The results of running the training data through the _str()_ function reveal that the dataset consists of **33 _Variables_**, and **2571 _Observations_**. Almost all of the variables are numerical, with the exception of the **Brand.Code** variable which is categorical. An other important revelation is that some of the variables contain missing values. 
 
-In order to figure out how we should deal with these, we will now check to see how many missing variables exist.
+In order to figure out how we should deal with the missing variables, we will now check to see how many missing variables exist.
 
 \ 
 
@@ -104,7 +105,7 @@ str(studentEvaluationTest)
 ```
 
 
-The above results reveal that the dataset consists of **33 _Variables_**, and **267 _Observations_**. Again, some of the variables contain missing values, and so we will impute these using the **_mice()_** funtion and the **Predictive mean matching** method.
+The above results reveal that the dataset consists of **33 _Variables_**, and **267 _Observations_**. Some of the variables contain missing values, and so we will impute these using the **_mice()_** funtion and the **Predictive mean matching** method.
 
 ```{r testDataImputation, eval=TRUE, message=FALSE, warning=FALSE}
 # Impute missing values using the Predictive mean matching imputation method.
@@ -114,4 +115,25 @@ studentEvaluationTest <- mice(studentEvaluationTest, m = 1, method = 'pmm', prin
 colSums(is.na(studentEvaluationTest))
 ```
 
+Again, the above results confirm that the missing values have been eliminated after imputation.
 
+
+#### Data Distribution
+
+Now that the data is in better shape, we will take a look at the distribution of data.
+
+**High Level Training Data Distrubution**
+
+```{r trainingDataDistribution, eval=TRUE, message=FALSE, warning=FALSE}
+summary(studentDataTraining)
+```
+
+We can see from the above results that some of the variables contain negative values suggesting that some outliers exist in the data. To confirm this, we will use the _inspectdf_ package's _inspect_num()_ function. 
+
+**High Level Test Data Distrubution**
+```{r testDataDistribution, eval=TRUE, message=FALSE, warning=FALSE}
+summary(studentEvaluationTest)
+```
+
+
+We can see from the above results that some of the vriables contain negative values. 
