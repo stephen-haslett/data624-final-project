@@ -383,6 +383,23 @@ plot_missing(beverage.train.clean)
 plot_missing(beverage.test.clean)
 ```
 
+### Pre-Modeling Data Splitting
+
+```{r premodelingDataSplitting ,echo=FALSE, message=FALSE, warning=FALSE}
+# Split the training data using an 80% training data split.
+trainingData <- createDataPartition(beverage.train.clean$PH, p = 0.8, list = FALSE)
+
+# Training data splits.
+trainingDataSet <- beverage.train.clean[trainingData, ]
+xTrainData <- subset(trainingDataSet, select = -PH)
+yTrainData <- subset(trainingDataSet, select = PH)
+
+# Test data splits.
+testDataSet <-  beverage.train.clean[-trainingData, ]
+xTestData <- subset(testDataSet, select = -PH)
+yTestData <- subset(testDataSet, select = PH)
+```
+
 
 ## Models
 
