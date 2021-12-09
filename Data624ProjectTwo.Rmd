@@ -9,33 +9,28 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 
 # Load required libraries.
-library(tidyverse)
 library(caret)
+library(dplyr)
+library(tidyr)
+library(tidyverse)
 library(kableExtra)
 library(lubridate)
 library(Hmisc)
 library(ggplot2)
 library(ggthemes)
-require(readxl)
-require(skimr)
-require(dplyr)
-require(naniar)
-require(caret)
-require(corrplot)
-require(DataExplorer)
-require(VIM)
-require(usdm)
-require(tidyr)
-require(kableExtra)
-require(tidyverse)
-require(AppliedPredictiveModeling)
-require(psych)
-require(cowplot)
+library(AppliedPredictiveModeling)
+library(skimr)
+library(naniar)
+library(corrplot)
+library(DataExplorer)
+library(VIM)
+library(usdm)
+library(psych)
+library(cowplot)
 library(mice)
 library(inspectdf)
 library(DMwR2)
 library(Cubist)
-
 # Disable scientific numbers for readability purposes.
 options(scipen = 999)
 ```
@@ -240,7 +235,7 @@ The boxplots reveal outliers, but we don't have have a strong reason to impute o
 
 ```{r retainNumericPredictors, echo=FALSE, message=FALSE, warning=FALSE}
 beverage_features <- beverage.train %>% dplyr::select(-c('Brand.Code'))
-beverage_features <- beverage_features %>% drop_na
+beverage_features <- beverage_features %>% drop_na()
 
 num_predictors <- ncol(beverage_features) - 1
 ```
@@ -349,7 +344,9 @@ beverage.test.clean$'Brand.Code'<- beverage.test.clean$'Brand.Code'
 set.seed(200)
 
 # Use the kNN method from the VIM package to impute missing values in our training data.
-beverage.train.clean <- beverage.train.clean %>% kNN(k = 10) %>% dplyr::select(colnames(beverage.train.clean))
+beverage.train.clean <- beverage.train.clean %>% 
+  kNN(k = 10) %>% 
+  dplyr::select(colnames(beverage.train.clean))
 
 # Use the kNN method from the VIM package to impute missing values in our evaluation data.
 beverage.test.clean <- beverage.test.clean %>% kNN(k = 10) %>% dplyr::select(colnames(beverage.test.clean))
@@ -396,7 +393,7 @@ xTrainData <- subset(trainingDataSet, select = -PH)
 yTrainData <- subset(trainingDataSet, select = PH)
 
 # Test data splits.
-testDataSet <-  beverage.train.clean[-trainingData, ]
+testDataSet <- beverage.train.clean[-trainingData, ]
 xTestData <- subset(testDataSet, select = -PH)
 yTestData <- subset(testDataSet, select = PH)
 ```
@@ -455,7 +452,7 @@ postResample(pred = knnPrediction, obs = yTestData$PH)
 set.seed(200)
 
 glmModel = train(PH ~ .,
-                 data =  trainingDataSet, 
+                 data = trainingDataSet, 
                  metric = 'RMSE',
                  preProcess = c('center', 'scale'),
                  method = 'glm', 
