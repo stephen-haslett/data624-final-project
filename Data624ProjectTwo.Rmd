@@ -34,6 +34,7 @@ require(cowplot)
 library(mice)
 library(inspectdf)
 library(DMwR2)
+library(Cubist)
 
 # Disable scientific numbers for readability purposes.
 options(scipen = 999)
@@ -458,8 +459,7 @@ glmModel = train(PH ~ .,
                  metric = 'RMSE',
                  preProcess = c('center', 'scale'),
                  method = 'glm', 
-                 trControl = trainControl(method = 'cv', number = 5, savePredictions = TRUE)
-)
+                 trControl = trainControl(method = 'cv', number = 5, savePredictions = TRUE))
 
 glmModel
 ```
@@ -479,8 +479,7 @@ plsModel = train(PH ~ .,
                  metric = 'RMSE',
                  preProcess = c('center', 'scale'),
                  method = 'pls', 
-                 trControl = trainControl(method = 'cv', number = 5, savePredictions = TRUE)
-)
+                 trControl = trainControl(method = 'cv', number = 5, savePredictions = TRUE))
 
 plsModel
 ```
@@ -491,12 +490,53 @@ plsModelPrediction <- predict(plsModel, xTestData)
 ```
 
 
+### Tree Models
+
+#### Cubist Model
+
+```{r cubistModel, echo=FALSE, message=FALSE, warning=FALSE}
+set.seed(200)
+
+cubistModel <- cubist(xTrainData, 
+                      yTrainData$PH, 
+                      committees = 6)
+```
+
+
+```{r cubistModelPredict, echo=FALSE, message=FALSE, warning=FALSE}
+cubistModelPrediction <- predict(cubistModel, newdata = xTestData)
+postResample(pred = cubistModelPrediction, obs = yTestData$PH)
+```
+
+
+#### Single Tree Model
+
+```{r singleTreeModel, echo=FALSE, message=FALSE, warning=FALSE}
+set.seed(200)
+
+singleTreeModel <- train(xTrainData,
+                         yTrainData$PH,
+                         method = 'rpart2',
+                         tuneLength = 10,
+                         trControl = trainControl(method = 'cv'))
+```
+
+
+```{r singleTreeModelPredict, echo=FALSE, message=FALSE, warning=FALSE}
+singleTreeModelPrediction <- predict(singleTreeModel, newdata = xTestData)
+postResample(pred = singleTreeModelPrediction , obs = yTestData$PH) 
+```
+
+
 ### Model Comparisons
 
 #### Non-Linear Model Comparisons
 
 
 #### Linear Model Comparisons
+
+
+#### Tree Model Comparisons
 
 
 
