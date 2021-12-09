@@ -491,8 +491,12 @@ plsModelPrediction <- predict(plsModel, xTestData)
 ```
 
 
+### Model Comparisons
+
+#### Non-Linear Model Comparisons
 
 
+#### Linear Model Comparisons
 
 
 
