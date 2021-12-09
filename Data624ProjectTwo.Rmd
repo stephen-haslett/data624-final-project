@@ -150,7 +150,7 @@ summary(beverage.train)
 
 
 
-```{r inspectData,echo=FALSE, message=FALSE, warning=FALSE}
+```{r inspectData, echo=FALSE, message=FALSE, warning=FALSE}
 #glimpse(beverage.train)
 #dim(beverage.train)
 #describe(beverage.train)
@@ -377,7 +377,7 @@ colSums(is.na(beverage.train.clean))
 As per the above results, we can confirm that the missing values have been eliminated after imputation.
 
 
-```{r recheckMissingValues,echo=FALSE, message=FALSE, warning=FALSE}
+```{r recheckMissingValues, echo=FALSE, message=FALSE, warning=FALSE}
 # Re-check for missing values.
 plot_missing(beverage.train.clean)
 plot_missing(beverage.test.clean)
@@ -385,7 +385,7 @@ plot_missing(beverage.test.clean)
 
 ### Pre-Modeling Data Splitting
 
-```{r premodelingDataSplitting ,echo=FALSE, message=FALSE, warning=FALSE}
+```{r premodelingDataSplitting, echo=FALSE, message=FALSE, warning=FALSE}
 # Split the training data using an 80% training data split.
 trainingData <- createDataPartition(beverage.train.clean$PH, p = 0.8, list = FALSE)
 
@@ -407,27 +407,88 @@ yTestData <- subset(testDataSet, select = PH)
 
 #### SVM Model
 
+```{r svmModel, echo=FALSE, message=FALSE, warning=FALSE}
+set.seed(200)
+
+svmModel = train(x = xTrainData[,-1], 
+                 y = yTrainData$PH,
+                 preProcess = c('center', 'scale'),
+                 method = 'svmRadial', 
+                 tuneLength = 10,
+                 trControl = trainControl(method = 'repeatedcv'))
+svmModel
+```
 
 
+```{r svmModelPredict, echo=FALSE, message=FALSE, warning=FALSE}
+svmPrediction = predict(svmModel, newdata = xTestData[,-1])
+postResample(pred = svmPrediction, obs = yTestData$PH) 
+```
 
 
+#### KNN Model
+
+```{r knnModel, echo=FALSE, message=FALSE, warning=FALSE}
+set.seed(200)
+
+knnModel <- train(x = xTrainData[,-1],
+                  y = yTrainData$PH,
+                  preProcess = c('center', 'scale'),
+                  method = 'knn',
+                  tuneLength = 10)
+knnModel
+```
 
 
+```{r knnModelPredict, echo=FALSE, message=FALSE, warning=FALSE}
+knnPrediction = predict(knnModel, newdata = xTestData[,-1])
+postResample(pred = knnPrediction, obs = yTestData$PH) 
+```
 
 
+### Linear Models
+
+#### Generalized Linear Model (GLM)
+
+```{r glmModel, echo=FALSE, message=FALSE, warning=FALSE}
+set.seed(200)
+
+glmModel = train(PH ~ .,
+                 data =  trainingDataSet, 
+                 metric = 'RMSE',
+                 preProcess = c('center', 'scale'),
+                 method = 'glm', 
+                 trControl = trainControl(method = 'cv', number = 5, savePredictions = TRUE)
+)
+
+glmModel
+```
 
 
+```{r glmModelPredict, echo=FALSE, message=FALSE, warning=FALSE}
+glmModelPrediction <- predict(glmModel, xTestData)
+```
+
+#### Partial Least Squares Model (PLS)
+
+```{r plmModel, echo=FALSE, message=FALSE, warning=FALSE}
+set.seed(200)
+
+plsModel = train(PH ~ .,
+                 data = trainingDataSet, 
+                 metric = 'RMSE',
+                 preProcess = c('center', 'scale'),
+                 method = 'pls', 
+                 trControl = trainControl(method = 'cv', number = 5, savePredictions = TRUE)
+)
+
+plsModel
+```
 
 
-
-
-
-
-
-
-
-
-
+```{r plmModelPredict, echo=FALSE, message=FALSE, warning=FALSE}
+plsModelPrediction <- predict(plsModel, xTestData)
+```
 
 
 
