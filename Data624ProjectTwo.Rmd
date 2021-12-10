@@ -310,15 +310,6 @@ beverage.test.clean <- beverage.test %>% dplyr::select(-c(MFR, 'Hyd.Pressure1'))
 ```
 
 
-### Imputing Missing Values
-
-In order to fill missing data, knn Imputation will be used. 
-
-```{r imputeMissingData, echo=FALSE, message=FALSE, warning=FALSE}
-#result<-preProcess(beverage.train.clean, method = c("knnImpute"), k = 10)
-#beverage.train.clean<-predict(result, beverage.train.clean)
-```
-
 -   We had 4 rows with missing `PH` that need to be removed.
 -   We replace missing values for `Brand Code` with "Unknown".
 -   Impute remaining missing values using `kNN()` from the `VIM` package
@@ -346,43 +337,47 @@ beverage.test.clean$'Brand.Code'<- beverage.test.clean$'Brand.Code'
 
 
 
-```{r, eval=TRUE, message=FALSE, warning=FALSE}
-set.seed(200)
+```{r imputeMissingValues, echo=FALSE, message=FALSE, warning=FALSE}
+#set.seed(200)
 
 # Use the kNN method from the VIM package to impute missing values in our training data.
-beverage.train.clean <- beverage.train.clean %>% 
-  kNN(k = 10) %>% 
-  dplyr::select(colnames(beverage.train.clean))
+#beverage.train.clean<-beverage.train.clean%>%kNN(k = 10)%>%dplyr::select(colnames(beverage.train.clean))
 
+#result1<-preProcess(beverage.train.clean, method = c("knnImpute"), k = 10)
+#beverage.train.clean<-predict(result1, beverage.train.clean)
 
 # Use the kNN method from the VIM package to impute missing values in our evaluation data.
-beverage.test.clean <- beverage.test.clean %>%
-  kNN(k = 10) %>%
-  dplyr::select(colnames(beverage.test.clean))
+#beverage.test.clean<-beverage.test.clean%>%kNN(k = 10)%>%dplyr::select(colnames(beverage.test.clean))
+
+#result2<-preProcess(beverage.test.clean, method = c("knnImpute"), k = 10)
+#beverage.test.clean<-predict(result2, beverage.test.clean)
+
 ```
 
-
-```{r trainingDataMissing, eval=TRUE, message=FALSE, warning=FALSE}
-# Count the amount of NA values in the dataset.
-colSums(is.na(beverage.train))
-```
 
 \ 
+
+### Imputing Missing Values
 
 **30** out of **33** variables contain missing values of varying quantities (_ranging from 212 to 1_). This is enough to justify imputation. Rather than removing entire observations with missing values and jeopardizing the accuracy of the data, we will use the **mice** package's _mice()_ function to impute them.
 
 The mice package offers an array of imputation methods (_Predictive mean matching, mean, norm, to name a few_), but due to the fact that the dataset contains both numeric and categorical variables, we have decided to use the **Predictive mean matching** method as this covers both variable types.
 
-```{r trainingDataImputation, eval=TRUE, message=FALSE, warning=FALSE}
-# Impute missing values using the Predictive mean matching imputation method.
+```{r missingDataImputation, eval=TRUE, message=FALSE, warning=FALSE}
+set.seed(200)
+
+# Impute missing values in training data using the Predictive mean matching imputation method.
 beverage.train.clean <- mice(beverage.train.clean, m = 1, method = 'pmm', print = FALSE) %>% complete()
 
 # After imputation, check if any missing values remain.
 colSums(is.na(beverage.train.clean))
+
+# Impute missing values in test data using the Predictive mean matching imputation method.
+beverage.test.clean <- mice(beverage.test.clean, m = 1, method = 'pmm', print = FALSE) %>% complete()
+
 ```
 
 As per the above results, we can confirm that the missing values have been eliminated after imputation.
-
 
 ```{r recheckMissingValues, echo=FALSE, message=FALSE, warning=FALSE}
 # Re-check for missing values.
@@ -390,22 +385,124 @@ plot_missing(beverage.train.clean)
 plot_missing(beverage.test.clean)
 ```
 
+
+```{r}
+#colnames(beverage.train.clean)
+
+colnames(beverage.test.clean)
+
+```
+
+
+
+### Convert Categorical Variable to Dummy variables
+
+"Brand.Code" is a categorical variable with values A, B, C, D and Unknown. So we will convert it to a set of dummy variables for modeling.
+
+```{r convertBrandCodeToDummy, echo=FALSE, message=FALSE, warning=FALSE}
+
+set.seed(200)
+
+# Convert Brand Code to dummy variables in the training data
+bev.train<-dummyVars("~ Brand.Code", data = beverage.train.clean)
+dummies<-predict(bev.train, beverage.train.clean)
+
+# Get dummy column names
+dummy.columns <- sort(colnames(dummies))
+
+# Sort the new dummy columns
+dummies<-as.tibble(dummies)%>%dplyr::select(dummy.columns)
+
+# Remove the original categorical variable
+beverage.train.clean<-beverage.train.clean%>%dplyr::select(-'Brand.Code')
+
+# Add the new dummy columns to the training dataframe
+beverage.train.clean<-cbind(dummies, beverage.train.clean)
+
+# Convert Brand Code to dummy variables in the test data
+bev.test<-dummyVars(" ~ Brand.Code", data = beverage.test.clean)
+#beverage.test.clean$PH <- 1
+test_dummies<-predict(bev.test, beverage.test.clean)
+
+# Now sort the eval_dummy columns so they match the training set dummies
+test.dummy.cols <- sort(colnames(test_dummies))
+test_dummies<-as.tibble(test_dummies)%>%dplyr::select(test.dummy.cols)
+
+# Remove the original categorical variable
+beverage.test.clean<-beverage.test.clean%>%dplyr::select(-c('Brand.Code'))
+
+# Add the new dummy columns to the test dataframe
+beverage.test.clean<-cbind(test_dummies, beverage.test.clean)
+
+```
+
+### Transform predictors with skewed distributions
+
+As discussed earlier, some of the predictors are highly skewed. To address this, we scale, center, and apply the Box-Cox transformation to thm using the "preProcess" function from the "caret" package. These transformations should result in more normal distributions.
+
+```{r transformPredictors, echo=FALSE, fig.height=14, fig.width=8, message=FALSE, warning=FALSE}
+
+set.seed(200)
+
+# Drop the target variable PH, since it doesn't need transformation
+bev.train.predictors<-beverage.train.clean %>%dplyr::select(-c(PH))
+
+# The test data doesn't have the PH column
+bev.test.predictors<-beverage.test.clean
+
+# Use caret pre-processing to handle scaling, normalizing and BoxCox transforming the training data.
+preProcValues<-preProcess(bev.train.predictors, method = c("center", "scale", "BoxCox"))
+
+bev.train.transformed <- predict(preProcValues, bev.train.predictors)
+bev.train.transformed$PH<-beverage.train.clean$PH
+
+preProcValues<-preProcess(bev.test.predictors, method = c("center", "scale", "BoxCox"))
+bev.test.transformed<-predict(preProcValues, bev.test.predictors)
+
+preProcValues
+```
+
+Here are some plots to demonstrate the changes in distributions after the transformations:
+
+```{r fig.height = 10, fig.width = 10}
+# Prepare data for ggplot
+gather_df<-bev.train.transformed%>%dplyr::select(-c(PH))%>%gather(key = 'variable', value = 'value')
+
+# Histogram plots of each variable
+ggplot(gather_df) + geom_histogram(aes(x=value, y = ..density..), bins=30)+geom_density(aes(x=value), color='red') + facet_wrap(. ~variable, scales='free', ncol=4)
+```
+
+As expected, the plots of the dummy variables are binary. For the others, we can still see bimodal predictors since we did not apply any feature engineering to them. Some predictors such as 'PSC Fill' and 'Temperature' still show some skewness. But we can move on building the models.
+
+
 ### Pre-Modeling Data Splitting
 
 ```{r premodelingDataSplitting, eval=TRUE, message=FALSE, warning=FALSE}
 # Split the training data using an 80% training data split.
-trainingData <- createDataPartition(beverage.train.clean$PH, p = 0.8, list = FALSE)
+trainingData <- createDataPartition(bev.train.transformed$PH, p = 0.8, list = FALSE)
 
 # Training data splits.
-trainingDataSet <- beverage.train.clean[trainingData, ]
+trainingDataSet <- bev.train.transformed[trainingData, ]
 xTrainData <- subset(trainingDataSet, select = -PH)
 yTrainData <- subset(trainingDataSet, select = PH)
 
 # Test data splits.
-testDataSet <- beverage.train.clean[-trainingData, ]
-xTestData <- subset(testDataSet, select = -PH)
-yTestData <- subset(testDataSet, select = PH)
+#testDataSet <- bev.test.transformed[-trainingData, ]
+TestData<-bev.test.transformed
+#xTestData <- subset(testDataSet)
+#yTestData <- subset(testDataSet)
 ```
+
+
+```{r}
+#colnames(xTrainData)
+#colnames(yTrainData)
+#colnames(xTestData)
+#colnames(yTestData)
+colnames(TestData)
+
+```
+
 
 
 ## Models 
@@ -415,7 +512,7 @@ yTestData <- subset(testDataSet, select = PH)
 #### Support Vector Machine (SVM) Model 
 
 ```{r svmModel, eval=TRUE, message=FALSE, warning=FALSE}
-set.seed(100)
+set.seed(200)
 
 # Define the SVM model.
 svmModel = train(x = xTrainData[,-1], 
@@ -426,8 +523,8 @@ svmModel = train(x = xTrainData[,-1],
                  trControl = trainControl(method = 'repeatedcv'))
 
 # Run predict() and postResample() on the model and display the results.
-svmPrediction <- predict(svmModel, newdata = xTestData[,-1])
-svmPerformance <- postResample(pred = svmPrediction, obs = yTestData$PH)
+svmPrediction <- predict(svmModel, newdata = TestData)
+svmPerformance <- postResample(pred = svmPrediction, obs = TestData$PH)
 svmPerformance
 ```
 
