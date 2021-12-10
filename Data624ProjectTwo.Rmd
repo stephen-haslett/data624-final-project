@@ -2,7 +2,13 @@
 title: "Data624 Final Project"
 author: "Jagdish Chhabria, Stephen Haslett"
 date: "12/06/2021"
-output: html_document
+output:
+ html_document:
+    toc: true
+    toc_float: true
+    code_folding: hide
+    theme: flatly
+    highlight: tango
 ---
 
 ```{r setup, include=FALSE}
@@ -10,20 +16,20 @@ knitr::opts_chunk$set(echo = TRUE)
 
 # Load required libraries.
 library(caret)
-library(dplyr)
 library(tidyr)
+library(dplyr)
 library(tidyverse)
 library(kableExtra)
+library(VIM)
 library(lubridate)
 library(Hmisc)
 library(ggplot2)
-library(ggthemes)
 library(AppliedPredictiveModeling)
+library(ggthemes)
 library(skimr)
 library(naniar)
 library(corrplot)
 library(DataExplorer)
-library(VIM)
 library(usdm)
 library(psych)
 library(cowplot)
@@ -61,7 +67,7 @@ beverage.test <- read.csv('./data/StudentEvaluation.csv', na.strings = c('', 'NA
 \ 
 
 
-```{r loadData, echo=FALSE, message=FALSE, warning=FALSE}
+```{r loadData, eval=TRUE, message=FALSE, warning=FALSE}
 # Remove the empty PH column from the evaluation data.
 beverage.test<-beverage.test %>% dplyr::select(-PH)
 ```
@@ -340,7 +346,7 @@ beverage.test.clean$'Brand.Code'<- beverage.test.clean$'Brand.Code'
 
 
 
-```{r}
+```{r, eval=TRUE, message=FALSE, warning=FALSE}
 set.seed(200)
 
 # Use the kNN method from the VIM package to impute missing values in our training data.
@@ -348,8 +354,11 @@ beverage.train.clean <- beverage.train.clean %>%
   kNN(k = 10) %>% 
   dplyr::select(colnames(beverage.train.clean))
 
+
 # Use the kNN method from the VIM package to impute missing values in our evaluation data.
-beverage.test.clean <- beverage.test.clean %>% kNN(k = 10) %>% dplyr::select(colnames(beverage.test.clean))
+beverage.test.clean <- beverage.test.clean %>%
+  kNN(k = 10) %>%
+  dplyr::select(colnames(beverage.test.clean))
 ```
 
 
@@ -383,7 +392,7 @@ plot_missing(beverage.test.clean)
 
 ### Pre-Modeling Data Splitting
 
-```{r premodelingDataSplitting, echo=FALSE, message=FALSE, warning=FALSE}
+```{r premodelingDataSplitting, eval=TRUE, message=FALSE, warning=FALSE}
 # Split the training data using an 80% training data split.
 trainingData <- createDataPartition(beverage.train.clean$PH, p = 0.8, list = FALSE)
 
@@ -399,58 +408,61 @@ yTestData <- subset(testDataSet, select = PH)
 ```
 
 
-## Models
+## Models 
 
-### Non-Linear Models
+### Non-Linear Models 
 
-#### SVM Model
+#### Support Vector Machine (SVM) Model 
 
-```{r svmModel, echo=FALSE, message=FALSE, warning=FALSE}
-set.seed(200)
+```{r svmModel, eval=TRUE, message=FALSE, warning=FALSE}
+set.seed(100)
 
+# Define the SVM model.
 svmModel = train(x = xTrainData[,-1], 
                  y = yTrainData$PH,
                  preProcess = c('center', 'scale'),
                  method = 'svmRadial', 
                  tuneLength = 10,
                  trControl = trainControl(method = 'repeatedcv'))
-svmModel
+
+# Run predict() and postResample() on the model and display the results.
+svmPrediction <- predict(svmModel, newdata = xTestData[,-1])
+svmPerformance <- postResample(pred = svmPrediction, obs = yTestData$PH)
+svmPerformance
 ```
 
 
-```{r svmModelPredict, echo=FALSE, message=FALSE, warning=FALSE}
-svmPrediction = predict(svmModel, newdata = xTestData[,-1])
-postResample(pred = svmPrediction, obs = yTestData$PH) 
-```
+\ 
 
+#### K Nearest Neighbors (KNN) Model
 
-#### KNN Model
+```{r knnModel, eval=TRUE, message=FALSE, warning=FALSE}
+set.seed(100)
 
-```{r knnModel, echo=FALSE, message=FALSE, warning=FALSE}
-set.seed(200)
-
+# Define the KNN model.
 knnModel <- train(x = xTrainData[,-1],
                   y = yTrainData$PH,
                   preProcess = c('center', 'scale'),
                   method = 'knn',
                   tuneLength = 10)
-knnModel
+
+# Run predict() and postResample() on the model and display the results.
+knnPrediction <- predict(knnModel, newdata = xTestData[,-1])
+knnPerformance <- postResample(pred = knnPrediction, obs = yTestData$PH)
+knnPerformance
 ```
 
 
-```{r knnModelPredict, echo=FALSE, message=FALSE, warning=FALSE}
-knnPrediction = predict(knnModel, newdata = xTestData[,-1])
-postResample(pred = knnPrediction, obs = yTestData$PH) 
-```
+\ 
 
-
-### Linear Models
+### Linear Models  
 
 #### Generalized Linear Model (GLM)
 
-```{r glmModel, echo=FALSE, message=FALSE, warning=FALSE}
-set.seed(200)
+```{r glmModel, eval=TRUE, message=FALSE, warning=FALSE}
+set.seed(100)
 
+# Define the GLM model.
 glmModel = train(PH ~ .,
                  data = trainingDataSet, 
                  metric = 'RMSE',
@@ -458,19 +470,21 @@ glmModel = train(PH ~ .,
                  method = 'glm', 
                  trControl = trainControl(method = 'cv', number = 5, savePredictions = TRUE))
 
-glmModel
-```
-
-
-```{r glmModelPredict, echo=FALSE, message=FALSE, warning=FALSE}
+# Run predict() and postResample() on the model and display the results.
 glmModelPrediction <- predict(glmModel, xTestData)
+glmPerformance <- postResample(pred = glmModelPrediction, obs = yTestData$PH)
+glmPerformance
 ```
+
+
+\ 
 
 #### Partial Least Squares Model (PLS)
 
-```{r plmModel, echo=FALSE, message=FALSE, warning=FALSE}
-set.seed(200)
+```{r plmModel, eval=TRUE, message=FALSE, warning=FALSE}
+set.seed(100)
 
+# Define the PLS model.
 plsModel = train(PH ~ .,
                  data = trainingDataSet, 
                  metric = 'RMSE',
@@ -478,174 +492,93 @@ plsModel = train(PH ~ .,
                  method = 'pls', 
                  trControl = trainControl(method = 'cv', number = 5, savePredictions = TRUE))
 
-plsModel
-```
-
-
-```{r plmModelPredict, echo=FALSE, message=FALSE, warning=FALSE}
+# Run predict() and postResample() on the model and display the results.
 plsModelPrediction <- predict(plsModel, xTestData)
+plsPerformance <- postResample(pred = plsModelPrediction, obs = yTestData$PH)
 ```
 
 
-### Tree Models
+\ 
+
+### Tree Models  
 
 #### Cubist Model
 
-```{r cubistModel, echo=FALSE, message=FALSE, warning=FALSE}
-set.seed(200)
+```{r cubistModel, eval=TRUE, message=FALSE, warning=FALSE}
+set.seed(100)
 
+# Define the Cubist model.
 cubistModel <- cubist(xTrainData, 
                       yTrainData$PH, 
                       committees = 6)
-```
 
-
-```{r cubistModelPredict, echo=FALSE, message=FALSE, warning=FALSE}
+# Run predict() and postResample() on the model and display the results.
 cubistModelPrediction <- predict(cubistModel, newdata = xTestData)
-postResample(pred = cubistModelPrediction, obs = yTestData$PH)
+cubistPerformance <- postResample(pred = cubistModelPrediction, obs = yTestData$PH)
+cubistPerformance
 ```
 
+
+\ 
 
 #### Single Tree Model
 
-```{r singleTreeModel, echo=FALSE, message=FALSE, warning=FALSE}
-set.seed(200)
+```{r singleTreeModel, eval=TRUE, message=FALSE, warning=FALSE}
+set.seed(100)
 
+# Define the Single Tree model.
 singleTreeModel <- train(xTrainData,
                          yTrainData$PH,
                          method = 'rpart2',
                          tuneLength = 10,
                          trControl = trainControl(method = 'cv'))
-```
 
-
-```{r singleTreeModelPredict, echo=FALSE, message=FALSE, warning=FALSE}
+# Run predict() and postResample() on the model and display the results.
 singleTreeModelPrediction <- predict(singleTreeModel, newdata = xTestData)
-postResample(pred = singleTreeModelPrediction , obs = yTestData$PH) 
+singleTreePerformance <- postResample(pred = singleTreeModelPrediction , obs = yTestData$PH) 
+singleTreePerformance
 ```
 
 
-### Model Comparisons
+\ 
+
+### Model Comparisons 
 
 #### Non-Linear Model Comparisons
 
+```{r nonlinearComparisons, eval=TRUE, message=FALSE, warning=FALSE}
+nonLinearComparisons <- rbind(
+  'Support Vector Machine' = svmPerformance,
+  'K Nearest Neighbors' = knnPerformance)
+
+nonLinearComparisons %>% kable() %>% kable_styling(bootstrap_options = c('striped'))
+```
+
+
+\ 
 
 #### Linear Model Comparisons
 
+```{r linearComparisons, eval=TRUE, message=FALSE, warning=FALSE}
+linearComparisons <- rbind(
+  'Generalized Linear Model' = glmPerformance,
+  'Partial Least Squares' = plsPerformance)
+
+linearComparisons %>% kable() %>% kable_styling(bootstrap_options = c('striped'))
+```
+
+
+\ 
 
 #### Tree Model Comparisons
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-```{r testDataMeta, eval=TRUE, message=FALSE, warning=FALSE}
-str(studentEvaluationTest)
+```{r treeComparisons, eval=TRUE, message=FALSE, warning=FALSE}
+treeComparisons <- rbind(
+  'Cubist' = cubistPerformance,
+  'Single Tree' = singleTreePerformance)
+
+treeComparisons %>% kable() %>% kable_styling(bootstrap_options = c('striped'))
 ```
 
 
-The above results reveal that the dataset consists of **33 _Variables_**, and **267 _Observations_**. Some of the variables contain missing values, and so we will impute these using the **_mice()_** funtion and the **Predictive mean matching** method.
-
-```{r testDataImputation, eval=TRUE, message=FALSE, warning=FALSE}
-# Impute missing values using the Predictive mean matching imputation method.
-studentEvaluationTest <- mice(studentEvaluationTest, m = 1, method = 'pmm', print = FALSE) %>% complete()
-
-# After imputation, check if any missing values remain.
-colSums(is.na(studentEvaluationTest))
-```
-
-Again, the above results confirm that the missing values have been eliminated after imputation.
-
-
-#### Data Distribution
-
-Now that the data is in better shape, we will take a look at the distribution of data.
-
-**High Level Training Data Distrubution**
-
-```{r trainingDataDistribution, eval=TRUE, message=FALSE, warning=FALSE}
-summary(studentDataTraining)
-```
-
-We can see from the above results that some of the variables contain negative values suggesting that some outliers exist in the data. To confirm this, we will use the _inspectdf_ package's _inspect_num()_ function. 
-
-**High Level Test Data Distrubution**
-```{r testDataDistribution, eval=TRUE, message=FALSE, warning=FALSE}
-summary(studentEvaluationTest)
-```
-
-
-We can see from the above results that some of the variables contain negative values. 
+## Model Selection
