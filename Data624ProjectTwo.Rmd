@@ -54,9 +54,9 @@ Please submit both Rpubs links and .rmd files or other readable formats for tech
 
 There are two files provided:
 
-1) StudentData.xlsx: This is the training dataset. Note the PH column will be our target we are trying to predict.
+1) **_StudentData.xlsx_**: This is the training dataset. Note the PH column will be our target we are trying to predict.
 
-2) StudentEvaluation.xlsx: This is the evaluation dataset. Note the PH column is empty in this dataset.
+2) **_StudentEvaluation.xlsx_**: This is the evaluation dataset. Note the PH column is empty in this dataset.
 
 ```{r dataImport, eval=TRUE, message=FALSE, warning=FALSE}
 # Load the ABC Beverages' train dataset.
@@ -71,7 +71,7 @@ beverage.eval <- read.csv('./data/StudentEvaluation.csv', na.strings = c('', 'NA
 
 ```{r loadData, eval=TRUE, message=FALSE, warning=FALSE}
 # Remove the empty PH column from the evaluation data.
-beverage.eval <- beverage.eval%>% dplyr::select(-PH)
+beverage.eval <- beverage.eval %>% dplyr::select(-PH)
 ```
 
 ## Data Exploration
@@ -86,14 +86,13 @@ head(beverage.train, 40) %>% kable() %>% kable_styling() %>% scroll_box(width = 
 ```
 
 ```{r trainingDataMeta, eval=TRUE, message=FALSE, warning=FALSE}
-# Examine structure of training data
+# Examine the structure of the training data.
 str(beverage.train)
 ```
 
 
 The results of running the training data through the _str()_ function reveal that the dataset consists of **33 _Variables_**, and **2571 _Observations_**. Almost all of the variables are numerical, with the exception of the **Brand.Code** variable which is categorical. An other important revelation is that some of the variables contain missing values. 
 
-In order to figure out how we should deal with the missing variables, we will now check to see how many missing variables exist.
 
 \ 
  
@@ -112,38 +111,69 @@ The training dataset contains 32 predictor variables which include 1 categorical
 
 The data has the following variables: 
 
-Brand Code: categorical, values: A, B, C, D
-Carb Volume: Numeric
-Fill Ounces: Numeric
-PC Volume: Numeric
-Carb Pressure: Numeric
-Carb Temp: Numeric
-PSC: Numeric
-PSC Fill: Numeric
-PSC CO2: Numeric
-Mnf Flow: Numeric
-Carb Pressure1: Numeric
-Fill Pressure: Numeric
-Hyd Pressure1: Numeric
-Hyd Pressure2: Numeric
-Hyd Pressure3: Numeric
-Hyd Pressure4: Numeric
-Filler Level: Numeric
-Filler Speed: Numeric
-Temperature: Numeric
-Usage cont: Numeric
-Carb Flow: Numeric
-Density: Numeric
-MFR: Numeric
-Balling: Numeric
-Pressure Vacuum: Numeric
-PH: This is the numeric TARGET variable that has to be predicted.
-Bowl Setpoint: Numeric
-Pressure Setpoint: Numeric
-Air Pressurer: Numeric
-Alch Rel: Numeric
-Carb Rel: Numeric
-Balling Lvl: Numeric
+- **Brand Code**: _categorical, values: A, B, C, D_
+
+- **Carb Volume**: _Numeric_
+
+- **Fill Ounces**: _Numeric_
+
+- **PC Volume**: _Numeric_
+
+- **Carb Pressure**: _Numeric_
+
+- **Carb Temp**: _Numeric_
+
+- **PSC**: _Numeric_
+
+- **PSC Fill**: _Numeric_
+
+- **PSC CO2**: _Numeric_
+
+- **Mnf Flow**: _Numeric_
+
+- **Carb Pressure1**: _Numeric_
+
+- **Fill Pressure**: _Numeric_
+
+- **Hyd Pressure1**: _Numeric_
+
+- **Hyd Pressure2**: _Numeric_
+
+- **Hyd Pressure3**: _Numeric_
+
+- **Hyd Pressure4**: _Numeric_
+
+- **Filler Level**: _Numeric_
+
+- **Filler Speed**: _Numeric_
+
+- **Temperature**: _Numeric_
+
+- **Usage cont**: _Numeric_
+
+- **Carb Flow**: _Numeric_
+
+- **Density**: _Numeric_
+
+- **MFR**: _Numeric_
+
+- **Balling**: _Numeric_
+
+- **Pressure Vacuum**: _Numeric_
+
+- **PH**: _This is the numeric **TARGET** variable that has to be predicted_.
+
+- **Bowl Setpoint**: _Numeric_
+
+- **Pressure Setpoint**: _Numeric_
+
+- **Air Pressurer**: _Numeric_
+
+- **Alch Rel**: _Numeric_
+
+- **Carb Rel**: _Numeric_
+
+- **Balling Lvl**: _Numeric_
 
 
 Now let's check the summary statistics for the data.
@@ -176,13 +206,9 @@ skim(beverage.train)
 ```
 
 
-```{r, echo=FALSE, message=FALSE, warning=FALSE}
-#DataExplorer::plot_histogram(beverage.train)
-```
 
-
-From the above, we see that most of the predictors (except for 2) have some missing data. So these would need to be imputed.
-For the target variable (PH), we see that 4 rows are missing this "PH" value. These rows will need to be dropped since they cannot be used for training. 
+From the above, we see that most of the predictors (except for 2) contain missing data and will therefore need to be imputed.
+For the target variable (_PH_), we see that 4 rows are missing this "PH" value. These rows will need to be dropped since they cannot be used for training. 
 
 Let's look at the distribution of the target variable next.
 
@@ -191,7 +217,7 @@ Let's look at the distribution of the target variable next.
 hist(beverage.train$PH)
 ```
 
-From the above, we can see that the target variable is not very skewed, even though there are some outliers.
+The above histogram reveals that the target variable is not very skewed, even though there are some outliers.
 The minimum value for PH is 7.88 and the maximum value is 9.36 indicating that ABC manufactures relatively alkaline beverages - likley to be green tea or fruit and vegetable juices.
 
 
@@ -294,7 +320,7 @@ In general, it looks like many of the predictors go hand-in-hand with other feat
 
 
 ```{r analyzePredictorCorrelations,echo=FALSE, message=FALSE, warning=FALSE}
-# Analyze multi-collinearity
+# Analyze multi-collinearity.
 vifcor(beverage_features) 
 
 ```
@@ -399,37 +425,37 @@ plot_missing(beverage.eval.clean)
 ```{r convertBrandCodeToDummy, echo=FALSE, message=FALSE, warning=FALSE}
 set.seed(200)
 
-# Convert Brand Code to dummy variables in the training data
+# Convert Brand Code to dummy variables in the training data.
 bev.train<-dummyVars("~ Brand.Code", data = beverage.train.clean)
 dummies<-predict(bev.train, beverage.train.clean)
 
-# Get dummy column names
+# Get dummy column names.
 dummy.columns <- sort(colnames(dummies))
 
-# Sort the new dummy columns
-dummies<-as.tibble(dummies)%>%dplyr::select(dummy.columns)
+# Sort the new dummy columns.
+dummies<-as.tibble(dummies) %>% dplyr::select(dummy.columns)
 
-# Remove the original categorical variable
-beverage.train.clean<-beverage.train.clean%>%dplyr::select(-'Brand.Code')
+# Remove the original categorical variable.
+beverage.train.clean <- beverage.train.clean %>% dplyr::select(-'Brand.Code')
 
-# Add the new dummy columns to the training dataframe
-beverage.train.clean<-cbind(dummies, beverage.train.clean)
+# Add the new dummy columns to the training dataframe.
+beverage.train.clean <- cbind(dummies, beverage.train.clean)
 
-# Convert Brand Code to dummy variables in the test data
-bev.eval<-dummyVars(" ~ Brand.Code", data = beverage.eval.clean)
-#beverage.eval.clean$PH <- 1
-eval_dummies<-predict(bev.eval, beverage.eval.clean)
+# Convert Brand Code to dummy variables in the test data.
+bev.eval <- dummyVars(" ~ Brand.Code", data = beverage.eval.clean)
 
-# Now sort the eval_dummy columns so they match the training set dummies
+# Define the "eval_dummies" variable.
+eval_dummies <- predict(bev.eval, beverage.eval.clean)
+
+# Now sort the eval_dummy columns so they match the training set dummies.
 eval.dummy.cols <- sort(colnames(eval_dummies))
-eval_dummies<-as.tibble(eval_dummies)%>%dplyr::select(eval.dummy.cols)
+eval_dummies <- as.tibble(eval_dummies) %>% dplyr::select(eval.dummy.cols)
 
-# Remove the original categorical variable
-beverage.eval.clean<-beverage.eval.clean%>%dplyr::select(-c('Brand.Code'))
+# Remove the original categorical variable.
+beverage.eval.clean <- beverage.eval.clean %>% dplyr::select(-c('Brand.Code'))
 
-# Add the new dummy columns to the test dataframe
-beverage.eval.clean<-cbind(eval_dummies, beverage.eval.clean)
-
+# Add the new dummy columns to the test dataframe.
+beverage.eval.clean <- cbind(eval_dummies, beverage.eval.clean)
 ```
 
 ### Transform predictors with skewed distributions
@@ -680,7 +706,7 @@ results <- data.frame(t(postResample(pred = singleTreeModelPrediction, obs = yTe
 
 \ 
 
-### Model Comparisons 
+## Model Comparisons 
 
 After running our models, we will now compare the results of the models and select the best performing model within each category. This will allow us to select the overall best performing model.  
 
