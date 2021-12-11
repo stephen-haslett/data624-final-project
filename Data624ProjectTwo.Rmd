@@ -53,7 +53,9 @@ Please submit both Rpubs links and .rmd files or other readable formats for tech
 ## Data Importation
 
 There are two files provided:
+
 1) StudentData.xlsx: This is the training dataset. Note the PH column will be our target we are trying to predict.
+
 2) StudentEvaluation.xlsx: This is the evaluation dataset. Note the PH column is empty in this dataset.
 
 ```{r dataImport, eval=TRUE, message=FALSE, warning=FALSE}
@@ -478,7 +480,7 @@ As expected, the plots of the dummy variables are binary. For the others, we can
 ### Pre-Modeling Data Splitting
 
 ```{r premodelingDataSplitting, eval=TRUE, message=FALSE, warning=FALSE}
-# Split the training data using an 80% training data split.
+# Split the training data into train and test sets using an 80% data split.
 trainingData <- createDataPartition(bev.train.transformed$PH, p = 0.8, list = FALSE)
 
 # Training data splits.
@@ -487,8 +489,14 @@ xTrainData <- subset(trainingDataSet, select = -PH)
 yTrainData <- subset(trainingDataSet, select = PH)
 
 # Test data splits.
+testDataSet <- bev.train.transformed[-trainingData, ]
+xTestData <- subset(testDataSet, select = -PH)
+yTestData <- subset(testDataSet, select = PH)
+
+
+# Test data splits.
 #testDataSet <- bev.test.transformed[-trainingData, ]
-TestData<-bev.test.transformed
+TestData <-bev.test.transformed
 #xTestData <- subset(testDataSet)
 #yTestData <- subset(testDataSet)
 ```
@@ -505,9 +513,13 @@ colnames(TestData)
 
 
 
-## Models 
+## Models
 
-### Non-Linear Models 
+In this section, we will build and run 3 categories of models: **tree**, **linear**, and **non-linear**. We will then compare the results of the models in each category, select the best category performer, and then select the overall best performer.  
+
+### Non-Linear Models
+
+In the non-linear category, we will build and run 2 models - a **Support Vector Machine (SVM)** model, and a **K-Nearest Neighbors (KNN)** model. We will use the caret package's _train()_ function to build the models, and use the same training and test datasets for both models.
 
 #### Support Vector Machine (SVM) Model 
 
@@ -523,8 +535,8 @@ svmModel = train(x = xTrainData[,-1],
                  trControl = trainControl(method = 'repeatedcv'))
 
 # Run predict() and postResample() on the model and display the results.
-svmPrediction <- predict(svmModel, newdata = TestData)
-svmPerformance <- postResample(pred = svmPrediction, obs = TestData$PH)
+svmPrediction <- predict(svmModel, newdata = xTestData[,-1])
+svmPerformance <- postResample(pred = svmPrediction, obs = yTestData$PH)
 svmPerformance
 ```
 
@@ -592,6 +604,7 @@ plsModel = train(PH ~ .,
 # Run predict() and postResample() on the model and display the results.
 plsModelPrediction <- predict(plsModel, xTestData)
 plsPerformance <- postResample(pred = plsModelPrediction, obs = yTestData$PH)
+plsPerformance
 ```
 
 
@@ -640,6 +653,8 @@ singleTreePerformance
 \ 
 
 ### Model Comparisons 
+
+After running our models, we will now compare the results of the models and select the best performing model within each category. This will allow us to select the overall best performing model.  
 
 #### Non-Linear Model Comparisons
 
