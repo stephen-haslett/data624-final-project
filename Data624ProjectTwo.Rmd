@@ -71,7 +71,7 @@ beverage.test <- read.csv('./data/StudentEvaluation.csv', na.strings = c('', 'NA
 
 ```{r loadData, eval=TRUE, message=FALSE, warning=FALSE}
 # Remove the empty PH column from the evaluation data.
-beverage.test<-beverage.test %>% dplyr::select(-PH)
+beverage.test <- beverage.test %>% dplyr::select(-PH)
 ```
 
 ## Data Exploration
@@ -338,25 +338,6 @@ beverage.test.clean$'Brand.Code' <-  brand_code$'Brand.Code'
 ```
 
 
-
-```{r imputeMissingValues, echo=FALSE, message=FALSE, warning=FALSE}
-#set.seed(200)
-
-# Use the kNN method from the VIM package to impute missing values in our training data.
-#beverage.train.clean<-beverage.train.clean%>%kNN(k = 10)%>%dplyr::select(colnames(beverage.train.clean))
-
-#result1<-preProcess(beverage.train.clean, method = c("knnImpute"), k = 10)
-#beverage.train.clean<-predict(result1, beverage.train.clean)
-
-# Use the kNN method from the VIM package to impute missing values in our evaluation data.
-#beverage.test.clean<-beverage.test.clean%>%kNN(k = 10)%>%dplyr::select(colnames(beverage.test.clean))
-
-#result2<-preProcess(beverage.test.clean, method = c("knnImpute"), k = 10)
-#beverage.test.clean<-predict(result2, beverage.test.clean)
-
-```
-
-
 \ 
 
 ### Imputing Missing Values
@@ -402,40 +383,37 @@ colnames(beverage.test.clean)
 "Brand.Code" is a categorical variable with values A, B, C, D and Unknown. So we will convert it to a set of dummy variables for modeling.
 
 ```{r convertBrandCodeToDummy, echo=FALSE, message=FALSE, warning=FALSE}
-
 set.seed(200)
 
-# Convert Brand Code to dummy variables in the training data
+# Convert Brand Code to dummy variables in the training data.
 bev.train<-dummyVars("~ Brand.Code", data = beverage.train.clean)
 dummies<-predict(bev.train, beverage.train.clean)
 
-# Get dummy column names
+# Get dummy column names.
 dummy.columns <- sort(colnames(dummies))
 
-# Sort the new dummy columns
-dummies<-as.tibble(dummies)%>%dplyr::select(dummy.columns)
+# Sort the new dummy columns.
+dummies <- as.tibble(dummies)%>%dplyr::select(dummy.columns)
 
-# Remove the original categorical variable
-beverage.train.clean<-beverage.train.clean%>%dplyr::select(-'Brand.Code')
+# Remove the original categorical variable.
+beverage.train.clean <- beverage.train.clean%>%dplyr::select(-'Brand.Code')
 
-# Add the new dummy columns to the training dataframe
-beverage.train.clean<-cbind(dummies, beverage.train.clean)
+# Add the new dummy columns to the training dataframe.
+beverage.train.clean <- cbind(dummies, beverage.train.clean)
 
-# Convert Brand Code to dummy variables in the test data
-bev.test<-dummyVars(" ~ Brand.Code", data = beverage.test.clean)
-#beverage.test.clean$PH <- 1
-test_dummies<-predict(bev.test, beverage.test.clean)
+# Convert Brand Code to dummy variables in the test data.
+bev.test <- dummyVars(" ~ Brand.Code", data = beverage.test.clean)
+test_dummies <- predict(bev.test, beverage.test.clean)
 
-# Now sort the eval_dummy columns so they match the training set dummies
+# Now sort the eval_dummy columns so they match the training set dummies.
 test.dummy.cols <- sort(colnames(test_dummies))
-test_dummies<-as.tibble(test_dummies)%>%dplyr::select(test.dummy.cols)
+test_dummies <- as.tibble(test_dummies) %>% dplyr::select(test.dummy.cols)
 
-# Remove the original categorical variable
-beverage.test.clean<-beverage.test.clean%>%dplyr::select(-c('Brand.Code'))
+# Remove the original categorical variable.
+beverage.test.clean <- beverage.test.clean %>% dplyr::select(-c('Brand.Code'))
 
-# Add the new dummy columns to the test dataframe
-beverage.test.clean<-cbind(test_dummies, beverage.test.clean)
-
+# Add the new dummy columns to the test dataframe.
+beverage.test.clean <- cbind(test_dummies, beverage.test.clean)
 ```
 
 ### Transform predictors with skewed distributions
@@ -446,7 +424,7 @@ As discussed earlier, some of the predictors are highly skewed. To address this,
 set.seed(200)
 
 # Drop the target variable PH, since it doesn't need transformation
-bev.train.predictors <- beverage.train.clean %>%dplyr::select(-c(PH))
+bev.train.predictors <- beverage.train.clean %>% dplyr::select(-c(PH))
 
 # The test data doesn't have the PH column
 bev.test.predictors <- beverage.test.clean
@@ -467,7 +445,7 @@ Here are some plots to demonstrate the changes in distributions after the transf
 
 ```{r fig.height = 10, fig.width = 10}
 # Prepare data for ggplot.
-gather_df<-bev.train.transformed%>%dplyr::select(-c(PH))%>%gather(key = 'variable', value = 'value')
+gather_df <- bev.train.transformed %>% dplyr::select(-c(PH)) %>% gather(key = 'variable', value = 'value')
 
 # Histogram plots of each variable.
 ggplot(gather_df) + geom_histogram(aes(x=value, y = ..density..), bins = 30) +
@@ -708,7 +686,12 @@ evaluationDataClean$PH <- cubistPredictions
 
 # Take a look at the evaluation data after PH value replacement.
 head(evaluationDataClean, 20) %>% kable() %>% kable_styling() %>% scroll_box(width = '100%', height = '600px')
+
+# Save the final results to a CSV file.
+write.csv(evaluationDataClean, './data/FinalPHPredictions.csv')
 ```
+
+Looking at the PH column (_the last column_) in the final data sample above, we can see that the empty PH values have now been replaced with our Cubist model predictions.
 
 
 ## Conclusion
