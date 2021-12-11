@@ -334,7 +334,7 @@ beverage.train.clean$'Brand.Code' <- brand_code$'Brand.Code'
 
 # Change Brand Code missing to 'Unknown' in our evaluation data.
 brand_code <- beverage.test.clean %>% dplyr::select('Brand.Code') %>% replace_na(list('Brand.Code' = 'Unknown'))
-beverage.test.clean$'Brand.Code' <- beverage.test.clean$'Brand.Code'
+beverage.test.clean$'Brand.Code' <-  brand_code$'Brand.Code'
 ```
 
 
@@ -697,7 +697,7 @@ Finally, In the tree model category, based on the fact that the **_cubist_** mod
 Now that we have identified the **_Cubist_** model as the best predictive model, we will apply the model to the evaluation dataset by replacing the empty **_PH** values in the set with the Cubist model's predictions.
 
 ```{r finalPHPreictions, eval=TRUE, message=FALSE, warning=FALSE}
-# Clean evaluation data.
+# Define the "evaluationDataClean" variable.
 evaluationDataClean <- bev.test.transformed
 
 # Run predict() on the Cubit model.
@@ -707,8 +707,9 @@ cubistPredictions <- predict(cubistModel, newdata = evaluationDataClean)
 evaluationDataClean$PH <- cubistPredictions
 
 # Take a look at the evaluation data after PH value replacement.
-evaluationDataClean %>% kable() %>% kable_styling() %>% scroll_box(width = '100%', height = '600px')
+head(evaluationDataClean, 20) %>% kable() %>% kable_styling() %>% scroll_box(width = '100%', height = '600px')
 ```
+
 
 ## Conclusion
 
