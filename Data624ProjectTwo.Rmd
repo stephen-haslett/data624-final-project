@@ -154,6 +154,12 @@ summary(beverage.train)
 ```
 
 
+```{r checkSummaryStatsEvalData, echo=FALSE, message=FALSE, warning=FALSE}
+# Check summary stats for evaluation data
+summary(beverage.eval)
+```
+
+
 
 ```{r inspectData, echo=FALSE, message=FALSE, warning=FALSE}
 #glimpse(beverage.train)
@@ -798,7 +804,7 @@ While not perfectly normal, the shape of the distribution of the predicted PH le
 
 ## Conclusion
 
-Based on the exploratory data analysis of the training dataset, we decided to prepare the data - this included dropping some columns and rows, creating a separate "Unknown" group for missing brand codes, creating dummy variables for the single categorical variable i.e. Brand Code, imputing missing variable data and box-cox transformingd the predictors to make them less skewed. 
+Based on the exploratory data analysis of the training dataset, we decided to prepare the data - this included dropping some columns and rows, creating a separate "Unknown" group for missing brand codes, creating dummy variables for the single categorical variable i.e. Brand Code, imputing missing variable data and box-cox transforming the predictors to make them less skewed. 
 
 After this, we used 3 categories of models: Linear, Non-linear and Tree-based. We trained 2 models from each category for a total of 6 models. We used a combination of RMSE and R-squared as the performance metrics to decide the final model. We decided to go with the Cubist model because it's metrics were clearly better than the other models. This model has the lowest RMSE and also happens to have the highest r-squared as well. This is not surprising given that these models handle non-linear relationships and multi-collinearity better. This comes across in the list of top predictors selected by this model, as described in a previous section. 
 
