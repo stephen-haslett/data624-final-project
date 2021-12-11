@@ -63,7 +63,7 @@ There are two files provided:
 beverage.train <- read.csv('./data/StudentData.csv', na.strings = c('', 'NA'), stringsAsFactors = FALSE)
 
 #  Load the ABC Beverages' evaluation dataset. 
-beverage.test <- read.csv('./data/StudentEvaluation.csv', na.strings = c('', 'NA'), stringsAsFactors = FALSE)
+beverage.eval <- read.csv('./data/StudentEvaluation.csv', na.strings = c('', 'NA'), stringsAsFactors = FALSE)
 ```
 
 \ 
@@ -71,7 +71,7 @@ beverage.test <- read.csv('./data/StudentEvaluation.csv', na.strings = c('', 'NA
 
 ```{r loadData, eval=TRUE, message=FALSE, warning=FALSE}
 # Remove the empty PH column from the evaluation data.
-beverage.test <- beverage.test %>% dplyr::select(-PH)
+beverage.eval <- beverage.eval%>% dplyr::select(-PH)
 ```
 
 ## Data Exploration
@@ -308,7 +308,7 @@ To summarize our data preparation and exploration, we distinguish our findings i
 beverage.train.clean <- beverage.train %>% dplyr::select(-c(MFR, 'Hyd.Pressure1'))
 
 # Remove the 2 fields from our evaluation data.
-beverage.test.clean <- beverage.test %>% dplyr::select(-c(MFR, 'Hyd.Pressure1'))
+beverage.eval.clean <- beverage.eval %>% dplyr::select(-c(MFR, 'Hyd.Pressure1'))
 ```
 
 
@@ -333,8 +333,8 @@ brand_code <- beverage.train.clean %>% dplyr::select('Brand.Code') %>% replace_n
 beverage.train.clean$'Brand.Code' <- brand_code$'Brand.Code'
 
 # Change Brand Code missing to 'Unknown' in our evaluation data.
-brand_code <- beverage.test.clean %>% dplyr::select('Brand.Code') %>% replace_na(list('Brand.Code' = 'Unknown'))
-beverage.test.clean$'Brand.Code' <-  brand_code$'Brand.Code'
+brand_code <- beverage.eval.clean %>% dplyr::select('Brand.Code') %>% replace_na(list('Brand.Code' = 'Unknown'))
+beverage.eval.clean$'Brand.Code' <- brand_code$'Brand.Code'
 ```
 
 
@@ -356,7 +356,7 @@ beverage.train.clean <- mice(beverage.train.clean, m = 1, method = 'pmm', print 
 colSums(is.na(beverage.train.clean))
 
 # Impute missing values in test data using the Predictive mean matching imputation method.
-beverage.test.clean <- mice(beverage.test.clean, m = 1, method = 'pmm', print = FALSE) %>% complete()
+beverage.eval.clean <- mice(beverage.eval.clean, m = 1, method = 'pmm', print = FALSE) %>% complete()
 
 ```
 
@@ -365,17 +365,8 @@ As per the above results, we can confirm that the missing values have been elimi
 ```{r recheckMissingValues, echo=FALSE, message=FALSE, warning=FALSE}
 # Re-check for missing values.
 plot_missing(beverage.train.clean)
-plot_missing(beverage.test.clean)
+plot_missing(beverage.eval.clean)
 ```
-
-
-```{r}
-#colnames(beverage.train.clean)
-
-colnames(beverage.test.clean)
-
-```
-
 
 
 ### Convert Categorical Variable to Dummy variables
@@ -385,35 +376,37 @@ colnames(beverage.test.clean)
 ```{r convertBrandCodeToDummy, echo=FALSE, message=FALSE, warning=FALSE}
 set.seed(200)
 
-# Convert Brand Code to dummy variables in the training data.
+# Convert Brand Code to dummy variables in the training data
 bev.train<-dummyVars("~ Brand.Code", data = beverage.train.clean)
 dummies<-predict(bev.train, beverage.train.clean)
 
-# Get dummy column names.
+# Get dummy column names
 dummy.columns <- sort(colnames(dummies))
 
-# Sort the new dummy columns.
-dummies <- as.tibble(dummies)%>%dplyr::select(dummy.columns)
+# Sort the new dummy columns
+dummies<-as.tibble(dummies)%>%dplyr::select(dummy.columns)
 
-# Remove the original categorical variable.
-beverage.train.clean <- beverage.train.clean%>%dplyr::select(-'Brand.Code')
+# Remove the original categorical variable
+beverage.train.clean<-beverage.train.clean%>%dplyr::select(-'Brand.Code')
 
-# Add the new dummy columns to the training dataframe.
-beverage.train.clean <- cbind(dummies, beverage.train.clean)
+# Add the new dummy columns to the training dataframe
+beverage.train.clean<-cbind(dummies, beverage.train.clean)
 
-# Convert Brand Code to dummy variables in the test data.
-bev.test <- dummyVars(" ~ Brand.Code", data = beverage.test.clean)
-test_dummies <- predict(bev.test, beverage.test.clean)
+# Convert Brand Code to dummy variables in the test data
+bev.eval<-dummyVars(" ~ Brand.Code", data = beverage.eval.clean)
+#beverage.eval.clean$PH <- 1
+eval_dummies<-predict(bev.eval, beverage.eval.clean)
 
-# Now sort the eval_dummy columns so they match the training set dummies.
-test.dummy.cols <- sort(colnames(test_dummies))
-test_dummies <- as.tibble(test_dummies) %>% dplyr::select(test.dummy.cols)
+# Now sort the eval_dummy columns so they match the training set dummies
+eval.dummy.cols <- sort(colnames(eval_dummies))
+eval_dummies<-as.tibble(eval_dummies)%>%dplyr::select(eval.dummy.cols)
 
-# Remove the original categorical variable.
-beverage.test.clean <- beverage.test.clean %>% dplyr::select(-c('Brand.Code'))
+# Remove the original categorical variable
+beverage.eval.clean<-beverage.eval.clean%>%dplyr::select(-c('Brand.Code'))
 
-# Add the new dummy columns to the test dataframe.
-beverage.test.clean <- cbind(test_dummies, beverage.test.clean)
+# Add the new dummy columns to the test dataframe
+beverage.eval.clean<-cbind(eval_dummies, beverage.eval.clean)
+
 ```
 
 ### Transform predictors with skewed distributions
@@ -427,7 +420,7 @@ set.seed(200)
 bev.train.predictors <- beverage.train.clean %>% dplyr::select(-c(PH))
 
 # The test data doesn't have the PH column
-bev.test.predictors <- beverage.test.clean
+bev.eval.predictors <- beverage.eval.clean
 
 # Use caret pre-processing to handle scaling, normalizing and BoxCox transforming the training data.
 preProcValues <- preProcess(bev.train.predictors, method = c("center", "scale", "BoxCox"))
@@ -435,8 +428,8 @@ preProcValues <- preProcess(bev.train.predictors, method = c("center", "scale", 
 bev.train.transformed <- predict(preProcValues, bev.train.predictors)
 bev.train.transformed$PH <- beverage.train.clean$PH
 
-preProcValues <- preProcess(bev.test.predictors, method = c("center", "scale", "BoxCox"))
-bev.test.transformed <- predict(preProcValues, bev.test.predictors)
+preProcValues <- preProcess(bev.eval.predictors, method = c("center", "scale", "BoxCox"))
+bev.eval.transformed <- predict(preProcValues, bev.eval.predictors)
 
 preProcValues
 ```
@@ -489,7 +482,7 @@ In the non-linear category, we will build and run 2 models - a **Support Vector 
 set.seed(200)
 
 # Define the SVM model.
-svmModel = train(x = xTrainData[,-1], 
+svmModel = train(x = xTrainData, 
                  y = yTrainData$PH,
                  preProcess = c('center', 'scale'),
                  method = 'svmRadial', 
@@ -497,9 +490,18 @@ svmModel = train(x = xTrainData[,-1],
                  trControl = trainControl(method = 'repeatedcv'))
 
 # Run predict() and postResample() on the model and display the results.
-svmPrediction <- predict(svmModel, newdata = xTestData[,-1])
+svmPrediction <- predict(svmModel, newdata = xTestData)
 svmPerformance <- postResample(pred = svmPrediction, obs = yTestData$PH)
 svmPerformance
+```
+
+
+```{r appendResultsSVM, eval=TRUE, message=FALSE, warning=FALSE}
+# Predict on test data and calculate performance
+results<-data.frame()
+results <- data.frame(t(postResample(pred = svmPrediction, obs = yTestData$PH))) %>%mutate(Model = "SVM") %>% 
+rbind(results)
+
 ```
 
 
@@ -508,19 +510,26 @@ svmPerformance
 #### K Nearest Neighbors (KNN) Model
 
 ```{r knnModel, eval=TRUE, message=FALSE, warning=FALSE}
-set.seed(100)
+set.seed(200)
 
 # Define the KNN model.
-knnModel <- train(x = xTrainData[,-1],
+knnModel <- train(x = xTrainData,
                   y = yTrainData$PH,
                   preProcess = c('center', 'scale'),
                   method = 'knn',
                   tuneLength = 10)
 
 # Run predict() and postResample() on the model and display the results.
-knnPrediction <- predict(knnModel, newdata = xTestData[,-1])
+knnPrediction <- predict(knnModel, newdata = xTestData)
 knnPerformance <- postResample(pred = knnPrediction, obs = yTestData$PH)
 knnPerformance
+```
+
+
+```{r appendResultsKNN,eval=TRUE, message=FALSE, warning=FALSE}
+# Predict on test data and calculate performance
+results <- data.frame(t(postResample(pred = knnPrediction, obs = yTestData$PH))) %>% mutate(Model = "k-Nearest Neighbors(kNN)") %>% rbind(results)
+
 ```
 
 
@@ -533,7 +542,7 @@ In the linear model category, we will build and run a **generalized linear model
 #### Generalized Linear Model (GLM)
 
 ```{r glmModel, eval=TRUE, message=FALSE, warning=FALSE}
-set.seed(100)
+set.seed(200)
 
 # Define the GLM model.
 glmModel = train(PH ~ .,
@@ -550,12 +559,20 @@ glmPerformance
 ```
 
 
+
+```{r appendResultsGLM,eval=TRUE, message=FALSE, warning=FALSE}
+# Predict on test data and calculate performance
+results <- data.frame(t(postResample(pred = glmModelPrediction, obs = yTestData$PH))) %>% mutate(Model = "Generalized Linear Model(GLM)") %>% rbind(results)
+
+```
+
+
 \ 
 
 #### Partial Least Squares Model (PLS)
 
 ```{r plmModel, eval=TRUE, message=FALSE, warning=FALSE}
-set.seed(100)
+set.seed(200)
 
 # Define the PLS model.
 plsModel = train(PH ~ .,
@@ -572,6 +589,13 @@ plsPerformance
 ```
 
 
+
+```{r appendResultsPLS,eval=TRUE, message=FALSE, warning=FALSE}
+# Predict on test data and calculate performance
+results <- data.frame(t(postResample(pred = plsModelPrediction, obs = yTestData$PH))) %>% mutate(Model = "Partial Least Squares(PLS)") %>% rbind(results)
+
+```
+
 \ 
 
 ### Tree Models
@@ -581,7 +605,7 @@ In this category, we will build and run a **cubist** model, and a **single tree*
 #### Cubist Model
 
 ```{r cubistModel, eval=TRUE, message=FALSE, warning=FALSE}
-set.seed(100)
+set.seed(200)
 
 # Define the Cubist model.
 cubistModel <- cubist(xTrainData, 
@@ -594,6 +618,13 @@ cubistPerformance <- postResample(pred = cubistModelPrediction, obs = yTestData$
 cubistPerformance
 ```
 
+
+
+```{r appendResultsCubist,eval=TRUE, message=FALSE, warning=FALSE}
+# Predict on test data and calculate performance
+results <- data.frame(t(postResample(pred = cubistModelPrediction, obs = yTestData$PH))) %>% mutate(Model = "Tree Model(Cubist)") %>% rbind(results)
+
+```
 
 \ 
 
@@ -615,6 +646,13 @@ singleTreePerformance <- postResample(pred = singleTreeModelPrediction , obs = y
 singleTreePerformance
 ```
 
+
+
+```{r appendResultsSingleTree, eval=TRUE, message=FALSE, warning=FALSE}
+# Predict on test data and calculate performance
+results <- data.frame(t(postResample(pred = singleTreeModelPrediction, obs = yTestData$PH))) %>% mutate(Model = "Single Tree Model") %>% rbind(results)
+
+```
 
 \ 
 
@@ -665,30 +703,46 @@ treeComparisons %>% kable() %>% kable_styling(bootstrap_options = c('striped'))
 Finally, In the tree model category, based on the fact that the **_cubist_** model has a lower RMSE than that of the **_single tree_** model, and the fact that it explains **_61%_** of the data variance (_as opposed to the single tree model's 45%_), the cubist tree model is the best performing model in this category.
 
 
-**Based on the RMSE and RSquared values of all the models we ran, the Cubist model is the overall best performer. The Rsquared for the Cubist model tells us that it explains 61% of the data variance which falls within an acceptable RSquared value range. Based on this, we will proceed with the Cubist model as the best predictive model for this project**.
+### Model Summary
 
+We now consolidate the results from all the models the following criteria: root mean squared error (RMSE), R-squared, and mean absolute error. The table below lists these criteria for each model.
+
+```{r combinePerformanceMetrics, eval=TRUE, message=FALSE, warning=FALSE}
+results %>% dplyr::select(Model, RMSE, Rsquared, MAE)
+
+```
+
+## Model Selection
+
+**Based on the RMSE and RSquared values of all the models we ran, the Cubist model is the overall best performer. This can be expected given that this model is more tolerant of multi-collinearity and works well with non-linear features. The Rsquared for the Cubist model tells us that it explains 61% of the data variance which falls within an acceptable RSquared value range. Based on this, we will proceed with the Cubist model as the best predictive model for this project**.
+
+Let's inspect the predictors that this model found important
+
+```{r checkFeatureImportance, eval=TRUE, message=FALSE, warning=FALSE}
+varImp(cubistModel)
+``` 
 
 \ 
 
 ## Predictions
 
-Now that we have identified the **_Cubist_** model as the best predictive model, we will apply the model to the evaluation dataset by replacing the empty **_PH** values in the set with the Cubist model's predictions.
+Now that we have identified the **_Cubist_** model as the best predictive model, we will apply the model to the evaluation dataset by replacing the empty **_PH** values in the evaluation dataset with the Cubist model's predictions.
 
 ```{r finalPHPreictions, eval=TRUE, message=FALSE, warning=FALSE}
 # Define the "evaluationDataClean" variable.
-evaluationDataClean <- bev.test.transformed
+evaluationDataClean <- bev.eval.transformed
 
 # Run predict() on the Cubit model.
 cubistPredictions <- predict(cubistModel, newdata = evaluationDataClean)
 
 # Replace the empty PH values in the evaluation set with the Cubist predictions.
-evaluationDataClean$PH <- cubistPredictions
+evaluationDataClean$PH <- round(cubistPredictions,2)
 
 # Take a look at the evaluation data after PH value replacement.
 head(evaluationDataClean, 20) %>% kable() %>% kable_styling() %>% scroll_box(width = '100%', height = '600px')
 
 # Save the final results to a CSV file.
-write.csv(evaluationDataClean, './data/FinalPHPredictions.csv')
+write.csv(evaluationDataClean, './data/FinalPHPredictions.csv', row.names=F)
 ```
 
 Looking at the PH column (_the last column_) in the final data sample above, we can see that the empty PH values have now been replaced with our Cubist model predictions.
