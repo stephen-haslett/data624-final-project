@@ -564,7 +564,9 @@ knnPerformance
 
 \ 
 
-### Linear Models  
+### Linear Models
+
+In the linear model category, we will build and run a **generalized linear model (GLM)**, and a **partial least squares (PLS)** model.
 
 #### Generalized Linear Model (GLM)
 
@@ -610,7 +612,9 @@ plsPerformance
 
 \ 
 
-### Tree Models  
+### Tree Models
+
+In this category, we will build and run a **cubist** model, and a **single tree** model.
 
 #### Cubist Model
 
@@ -667,6 +671,8 @@ nonLinearComparisons %>% kable() %>% kable_styling(bootstrap_options = c('stripe
 ```
 
 
+Using **RMSE** and **Rsquared** as the selection criteria for the best performing model, the **support vector machine** model yielded the best performance. The **_Rsquared_** value of the model is 0.57 which tells us that the model explains **_57%_** of the variability in the data. This trumps the Rsquared value of the KNN model (52%), but not by much.
+
 \ 
 
 #### Linear Model Comparisons
@@ -678,6 +684,8 @@ linearComparisons <- rbind(
 
 linearComparisons %>% kable() %>% kable_styling(bootstrap_options = c('striped'))
 ```
+
+Again, using **RMSE** and **Rsquared** to select the best model, the GLM and PLS models are almost the same in terms of their performance. However, the **generalized linear model** performs slightly better than the **partial least squares** model. The GLM model explains **_41%_** of the data variance which is higher than the Rsquared value of the PLS model by a fraction.
 
 
 \ 
@@ -692,5 +700,14 @@ treeComparisons <- rbind(
 treeComparisons %>% kable() %>% kable_styling(bootstrap_options = c('striped'))
 ```
 
+Finally, In the tree model category, based on the fact that the **_cubist_** model has a lower RMSE than that of the **_single tree_** model, and the fact that it explains **_61%_** of the data variance (_as opposed to the single tree model's 45%_), the cubist tree model is the best performing model in this category.
 
-## Model Selection
+
+**Based on the RMSE and RSquared values of all the models we ran, the Cubist model is the overall best performer. The Rsquared for the Cubist model tells us that it explains 61% of the data variance which falls within an acceptable RSquared value range. Based on this, we will proceed with the Cubist model as the best predictive model for this project**.
+
+
+\ 
+
+### Predictions
+
+
