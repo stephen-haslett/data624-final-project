@@ -41,7 +41,7 @@ library(Cubist)
 options(scipen = 999)
 ```
 
-## Assignment Overview
+## Assignment Overview / Problem Statement
 
 This is role playing. I am your new boss. I am in charge of production at ABC Beverage and you are a team of data scientists reporting to me. My leadership has told me that new regulations are requiring us to understand our manufacturing process, the predictive factors and be able to report to them our predictive model of PH.
 
@@ -50,7 +50,7 @@ Please use the historical data set I am providing. Build and report the factors 
 Please submit both Rpubs links and .rmd files or other readable formats for technical and non-technical reports. Also submit the excel file showing the prediction of your models for pH.
 
 
-## Data Importation
+## Data Import
 
 There are two files provided:
 
@@ -86,6 +86,7 @@ head(beverage.train, 40) %>% kable() %>% kable_styling() %>% scroll_box(width = 
 ```
 
 ```{r trainingDataMeta, eval=TRUE, message=FALSE, warning=FALSE}
+# Examine structure of training data
 str(beverage.train)
 ```
 
@@ -102,8 +103,8 @@ In order to figure out how we should deal with the missing variables, we will no
 We will now perform the same inspections/conversions on the test dataset. 
 
 ```{r testgDataStructure, eval=TRUE, message=FALSE, warning=FALSE}
-# Take a look at the structure of the test dataset.
-head(beverage.test, 40) %>% kable() %>% kable_styling() %>% scroll_box(width = '100%', height = '600px')
+# Examine the structure of the evaluation dataset.
+head(beverage.eval, 40) %>% kable() %>% kable_styling() %>% scroll_box(width = '100%', height = '600px')
 ```
 
 
@@ -112,37 +113,37 @@ The training dataset contains 32 predictor variables which include 1 categorical
 The data has the following variables: 
 
 Brand Code: categorical, values: A, B, C, D
-Carb Volume:
-Fill Ounces:
-PC Volume:
-Carb Pressure:
-Carb Temp:
-PSC:
-PSC Fill:
-PSC CO2:
-Mnf Flow:
-Carb Pressure1:
-Fill Pressure:
-Hyd Pressure1:
-Hyd Pressure2:
-Hyd Pressure3:
-Hyd Pressure4:
-Filler Level:
-Filler Speed:
-Temperature:
-Usage cont:
-Carb Flow:
-Density:
-MFR:
-Balling:
-Pressure Vacuum:
-PH: This is the TARGET variable that we will try to predict.
-Bowl Setpoint:
-Pressure Setpoint:
-Air Pressurer:
-Alch Rel:
-Carb Rel:
-Balling Lvl:
+Carb Volume: Numeric
+Fill Ounces: Numeric
+PC Volume: Numeric
+Carb Pressure: Numeric
+Carb Temp: Numeric
+PSC: Numeric
+PSC Fill: Numeric
+PSC CO2: Numeric
+Mnf Flow: Numeric
+Carb Pressure1: Numeric
+Fill Pressure: Numeric
+Hyd Pressure1: Numeric
+Hyd Pressure2: Numeric
+Hyd Pressure3: Numeric
+Hyd Pressure4: Numeric
+Filler Level: Numeric
+Filler Speed: Numeric
+Temperature: Numeric
+Usage cont: Numeric
+Carb Flow: Numeric
+Density: Numeric
+MFR: Numeric
+Balling: Numeric
+Pressure Vacuum: Numeric
+PH: This is the numeric TARGET variable that has to be predicted.
+Bowl Setpoint: Numeric
+Pressure Setpoint: Numeric
+Air Pressurer: Numeric
+Alch Rel: Numeric
+Carb Rel: Numeric
+Balling Lvl: Numeric
 
 
 Now let's check the summary statistics for the data.
@@ -185,6 +186,7 @@ hist(beverage.train$PH)
 ```
 
 From the above, we can see that the target variable is not very skewed, even though there are some outliers.
+The minimum value for PH is 7.88 and the maximum value is 9.36 indicating that ABC manufactures relatively alkaline beverages - likley to be green tea or fruit and vegetable juices.
 
 
 ```{r checkMissingData, echo=FALSE, message=FALSE, warning=FALSE}
@@ -241,44 +243,59 @@ The boxplots reveal outliers, but we don't have have a strong reason to impute o
 
 ### Predictor-Target Correlations
 
-```{r retainNumericPredictors, echo=FALSE, message=FALSE, warning=FALSE}
-beverage_features <- beverage.train %>% dplyr::select(-c('Brand.Code'))
-beverage_features <- beverage_features %>% drop_na()
-
-num_predictors <- ncol(beverage_features) - 1
-```
-
-
 We now derive the correlations for the numeric predictors. This would enable us to focus on those predictors that show stronger positive or negative correlations with `PH`. Predictors with correlations closer to zero will likely not provide any meaningful information for the target variable.
 
-```{r calculateCorrelations, echo=FALSE, message=FALSE, warning=FALSE}
-# Show feature correlations/target by decreasing correlation.
-stack(sort(cor(beverage_features[, num_predictors + 1], beverage_features[,1:num_predictors])[,],decreasing = TRUE))
+```{r retainNumericPredictors, echo=FALSE, message=FALSE, warning=FALSE}
+
+beverage_features <- beverage.train %>% dplyr::select(-c('Brand.Code'))
+beverage_features <- beverage_features %>% drop_na()
+PH<-data.frame(beverage_features$PH)
+beverage_features <- beverage_features%>% dplyr::select(-c('PH'))
+num_predictors <- ncol(beverage_features)
+
 ```
+
+
+
+```{r calculateCorrelations, echo=FALSE, message=FALSE, warning=FALSE}
+
+# Show feature correlations/target by decreasing correlation.
+stack(sort(cor(PH, beverage_features[,1:num_predictors])[,],decreasing = TRUE))
+#stack(sort(cor(beverage_features[, num_predictors + 1], beverage_features[,1:num_predictors])[,],decreasing = TRUE))
+```
+
 
 From the above, we can see that the variables `Bowl Setpoint`, `Filler Level`, `Carb Flow`, `Pressure Vacuum`, and `Carb Rel` have the strongest positive correlations with `PH`, while `Mnf Flow`, `Usage cont`, `Fill Pressure`, `Pressure Setpoint`, and `Hyd Pressure3` have the strongest negative correlations with `PH`. The other features have a weak or slightly negative correlation, which implies they have less predictive power.
 
-### Multicollinearity
 
-One problem that can occur with multiple regression is a correlation between predictors or multicollinearity. A quick check is to run correlations between all predictors.
+### Multicollinearity 
+
+One problem that can occur with multiple regression and other models is a correlation between predictors or multicollinearity. A quick check is to run correlations between all predictors.
 
 
 ```{r plotCorrelations, echo=FALSE, fig.height=8, fig.width=10 }
 # Plot pairwise correlations between Predictors.
-corr.bev <- cor(beverage_features, use = "pairwise.complete.obs", method = 'pearson')
+corr.bev <-cor(beverage_features, use = "pairwise.complete.obs", method = 'pearson')
 corrplot(corr.bev, method="color", type = "lower", tl.col = "black", tl.srt = 5)
 
 #corrplot(corr.bev, method = "color",type = "upper", order = "original", number.cex = .6,addCoef.col = "black", tl.srt = 90, diag = TRUE)
 ```
 
-We can see that some predictors are highly correlated with one another, such as `Balling Level` and `Carb Volume`, `Carb Rel`, `Alch Rel`, `Density`, and `Balling`, with a correlation between 0.75 and 1. When we start examining predictors for our models, we'll have to consider the correlations between them and avoid including pairs with strong correlations.
 
-In general, it looks like many of the predictors go hand-in-hand with other features and multicollinearity will be a problem.
+We can see that some predictors are highly correlated with one another, such as `Balling Level` and `Carb Volume`, `Carb Rel` and `Alch Rel`, `Density`, and `Balling`, with a correlation between 0.75 and 1. When we start examining predictors for our models, we'll have to consider the correlations between them and avoid including pairs with strong correlations.
+
+In general, it looks like many of the predictors go hand-in-hand with other features and multicollinearity could be a problem.
 
 
-```{r ,echo=FALSE, message=FALSE, warning=FALSE}
-#vifcor(beverage_features) 
+```{r analyzePredictorCorrelations,echo=FALSE, message=FALSE, warning=FALSE}
+# Analyze multi-collinearity
+vifcor(beverage_features) 
+
 ```
+
+
+The vifcor function from the usdm package allows us to do an early analysis into multi-collinearity. As can be seen from the above, this function tells us that 6 of the 31 numeric predictors are highly correlated.
+
 
 ### Near-Zero Variance Predictors
 
@@ -449,7 +466,9 @@ ggplot(gather_df) + geom_histogram(aes(x=value, y = ..density..), bins = 30) +
 As expected, the plots of the dummy variables are binary. For the others, we can still see bimodal predictors since we did not apply any feature engineering to them. Some predictors such as 'PSC Fill' and 'Temperature' still show some skewness. But we can move on building the models.
 
 
-### Pre-Modeling Data Splitting
+### Pre-Modeling Data Splitting 
+
+We perform a train-test split with a 80:20 ratio.
 
 ```{r premodelingDataSplitting, eval=TRUE, message=FALSE, warning=FALSE}
 # Split the training data into train and test sets using an 80% data split.
@@ -467,8 +486,7 @@ yTestData <- subset(testDataSet, select = PH)
 ```
 
 
-
-## Models
+## Model Building/Fitting 
 
 In this section, we will build and run 3 categories of models: **tree**, **linear**, and **non-linear**. We will then compare the results of the models in each category, select the best category performer, and then select the overall best performer.  
 
@@ -712,15 +730,34 @@ results %>% dplyr::select(Model, RMSE, Rsquared, MAE)
 
 ```
 
-## Model Selection
+## Model Selection and top predictors analysis
 
 **Based on the RMSE and RSquared values of all the models we ran, the Cubist model is the overall best performer. This can be expected given that this model is more tolerant of multi-collinearity and works well with non-linear features. The Rsquared for the Cubist model tells us that it explains 61% of the data variance which falls within an acceptable RSquared value range. Based on this, we will proceed with the Cubist model as the best predictive model for this project**.
 
 Let's inspect the predictors that this model found important
 
 ```{r checkFeatureImportance, eval=TRUE, message=FALSE, warning=FALSE}
-varImp(cubistModel)
+var.imp.cubist<-varImp(cubistModel, scale = FALSE)
+var.imp.cubist
+
 ``` 
+
+
+```{r plotFeatureImportance, eval=TRUE, message=FALSE, warning=FALSE}
+
+#plot(varImp(cubistModel, scale = FALSE), top=20)
+#plot(varImp(svmModel, scale = FALSE), top=20)
+
+```
+
+Interestingly, we can see that the list of important predictors has some that had strong correlations (positive and negative) with the target variable. For example: Alch Rel, Bowl Setpoint, Carb Flow, Pressure Vacuum, Oxygen Filler and Mnf Flow.
+
+At the same time, there are other predictors that showed strong correlation with PH, but did not make it to the top 10 important predictors. For example: Filler Level, Carb Rel, Oxygen Filler, Usage cont, Fill Pressure, Temperature, Pressure Setpoint, Hyd Pressure2 and Hyd Pressure3.
+
+Instead, the topmost important predictors had variables such as Balling Lvl, Bowl Setpoint, Filler Speed and Balling in the important predictors list that did not demonstrate the strongest correlations. 
+
+This begins to make more sense when we compare to the predictor-predictor correlations calculated previously as well as the results of the vifcor function used previously. We and see that Carb Rel and Alch Rel are strongly correlated as are Alch Rel and Hyd Pressure3. So this indicates that the model is taking into account multi-collinearity and avoiding predictors that are strongly correlated with others that have already been selected and thereby do not provide incremental predictive power.
+
 
 \ 
 
@@ -748,5 +785,33 @@ write.csv(evaluationDataClean, './data/FinalPHPredictions.csv', row.names=F)
 Looking at the PH column (_the last column_) in the final data sample above, we can see that the empty PH values have now been replaced with our Cubist model predictions.
 
 
+```{r inspectRangeOfPredictedValues, eval=TRUE, message=FALSE, warning=FALSE}
+# Inspect range of predicted values for evaluation dataset
+summary(evaluationDataClean$PH)
+histogram(evaluationDataClean$PH)
+
+```
+
+From the above, we can see that the range of the target variable in the evaluation dataset is slightly narrower than its corresponding range in the training data. This gives us confidence that the model seems to work well on unseen data. Obviously the real accuracy metric would be comparing to the actual PH values for the evaluation data, which we did not have access to.
+
+While not perfectly normal, the shape of the distribution of the predicted PH level is reasonably close to normal.
+
 ## Conclusion
+
+Based on the exploratory data analysis of the training dataset, we decided to prepare the data - this included dropping some columns and rows, creating a separate "Unknown" group for missing brand codes, creating dummy variables for the single categorical variable i.e. Brand Code, imputing missing variable data and box-cox transformingd the predictors to make them less skewed. 
+
+After this, we used 3 categories of models: Linear, Non-linear and Tree-based. We trained 2 models from each category for a total of 6 models. We used a combination of RMSE and R-squared as the performance metrics to decide the final model. We decided to go with the Cubist model because it's metrics were clearly better than the other models. This model has the lowest RMSE and also happens to have the highest r-squared as well. This is not surprising given that these models handle non-linear relationships and multi-collinearity better. This comes across in the list of top predictors selected by this model, as described in a previous section. 
+
+For the final model selected, we see that it considers the following as the top 5 predictors in terms of importance: Mnf.Flow, Alch.Rel, Balling.Lvl, Pressure.Vacuum and Brand Code C. Finding Brand Code as a top predictor is interesting because at the end of the day, Brand is a not a physical/chemical construct that can be linked to PH levels. but we think it must be best encapsulating other chemical features collectively that are in turn helpful in explaining the PH levels. 
+
+We see that the range of the predicted values in the evaluation data is in line with the range of the predicted values in the training data, which gives us confidence that the selected model seems generalizable. Besides, the general shape of the distribution of the predicted values is approximately normal. 
+
+As with any real-world data science process, the logical next step would be to calculate better accuracy metrics by comparing the predicted values to the actual PH values for the evaluation data. Our recommendation to the manager of ABC Beverages would be to go with the Cubist model and put in place an on-going process to keep monitoring the model and fine-tuning in case the model metrics show any deterioration. 
+
+
+
+## References
+Linear Models with R: Julian Faraway.
+Applied Predictive Modeling: Kuhn & Johnson
+https://newalbanysmiles.com/ph-values-of-common-beverages/
 
