@@ -89,6 +89,8 @@ head(beverage.eval, 40) %>% kable() %>% kable_styling() %>% scroll_box(width = '
 ```
 
 
+\ 
+
 We will now check the summary statistics for the data.
 
 ```{r checkSummaryStatsEvalData, echo=FALSE, message=FALSE, warning=FALSE}
@@ -99,7 +101,9 @@ summary(beverage.eval)
 
 The summary statistics for the evaluation dataset tell us that it contains missing values so we will need to impute these later on in the project.
 
-We will now examine the training dataset in detail as this is the main dataset that we will be working with throughout the project.
+\ 
+
+Our next step is to examine the training dataset in detail as this is the main dataset that we will be working with throughout the project.
 
 
 ### Training Dataset
@@ -117,9 +121,9 @@ str(beverage.train)
 ```
 
 
-The results of running the training data through the _str()_ function reveal that the dataset consists of **33 _Columns_**, and **2571 _Observations_**. Almost all of the variables are numerical, with the exception of the **Brand.Code** variable which is categorical. An other important revelation is that some of the variables contain missing values. Let's see how many missing values it contains
+The results of running the training data through the _str()_ function reveal that the dataset consists of **33 _Columns_**, and **2571 _Observations_**. Almost all of the variables are numerical, with the exception of the **Brand.Code** variable which is categorical. An other important revelation is that some of the variables contain missing values.
 
-The training dataset contains 32 predictor variables which include 1 categorical variable and the rest are numeric (continuous and discrete) variables. There are 2571 records in the training data and 267 records in the evaluation dataset. The target column is PH. 
+The training dataset contains 32 predictor variables which include 1 categorical variable and the rest are numeric (continuous and discrete) variables. There are 2571 records in the training data and 267 records in the evaluation dataset. The target column is the PH column. 
 
 The data has the following variables: 
 
@@ -208,9 +212,10 @@ skim(beverage.train)
 ```
 
 
+\ 
 
 From the above, we see that most of the predictors (except for 2) contain missing data and will therefore need to be imputed.
-For the target variable (_PH_), we see that 4 rows are missing this "PH" value. These rows will need to be dropped since they cannot be used for training. 
+For the target variable (_PH_), we see that 4 rows are missing "PH" values. These rows will need to be dropped since they cannot be used for training. 
 
 Let's look at the distribution of the target variable next.
 
@@ -220,7 +225,7 @@ hist(beverage.train$PH)
 ```
 
 The above histogram reveals that the target variable is not very skewed, even though there are some outliers.
-The minimum value for PH is 7.88 and the maximum value is 9.36 indicating that ABC manufactures relatively alkaline beverages - likley to be green tea or fruit and vegetable juices.
+The minimum value for PH is 7.88 and the maximum value is 9.36 indicating that ABC manufactures relatively alkaline beverages - likely to be green tea or fruit and vegetable juices.
 
 
 ```{r checkMissingData, echo=FALSE, message=FALSE, warning=FALSE}
@@ -234,9 +239,11 @@ knitr::kable(miss_var_summary(beverage.train),
         gg_miss_upset(beverage.train)
 ```
 
-From the above, we can see that about 8.25% of the records are missing a value for `MFR`. We may need to drop this feature since as missingness increases, the increasing amount of imputed values would have potential negative consequences. 
-The second most missing variable is the categorical variable called "Brand Code", which is missing about 4.67% percent of its values. These could potentially be a 5th brand besides the existing A,B,C and D or could be one of the existing 4 brands. In any case, we will create a new feature category 'Unknown' for these records. The rest of the predictors are missing smaller percentages of values, and we can use KNN imputation for these records. 
+The above statistics tell us that about 8.25% of the records are missing a value for `MFR`. We may need to drop this feature since as missingness increases, the increasing amount of imputed values would have potential negative consequences. 
 
+The second most missing variable is the categorical variable called "Brand Code", which is missing about 4.67% percent of its values. These could potentially be a 5th brand besides the existing A,B,C and D or could be one of the existing 4 brands. In any case, we will create a new feature category 'Unknown' for these records. The rest of the predictors are missing smaller percentages of values, and we can use imputation for these records. 
+
+\ 
 
 ```{r plotPredictors, fig.height = 10, fig.width = 10, echo=FALSE}
 # Prepare data for plotting predictors.
@@ -278,25 +285,21 @@ The boxplots reveal outliers, but we don't have have a strong reason to impute o
 
 ### Predictor-Target Correlations
 
-We now derive the correlations for the numeric predictors. This would enable us to focus on those predictors that show stronger positive or negative correlations with `PH`. Predictors with correlations closer to zero will likely not provide any meaningful information for the target variable.
+We will now derive the correlations for the numeric predictors. This will enable us to focus on those predictors that show stronger positive or negative correlations with `PH`. Predictors with correlations closer to zero will most likely not provide any meaningful information for the target variable.
 
 ```{r retainNumericPredictors, echo=FALSE, message=FALSE, warning=FALSE}
-
 beverage_features <- beverage.train %>% dplyr::select(-c('Brand.Code'))
 beverage_features <- beverage_features %>% drop_na()
 PH<-data.frame(beverage_features$PH)
 beverage_features <- beverage_features%>% dplyr::select(-c('PH'))
 num_predictors <- ncol(beverage_features)
-
 ```
 
 
 
 ```{r calculateCorrelations, echo=FALSE, message=FALSE, warning=FALSE}
-
 # Show feature correlations/target by decreasing correlation.
 stack(sort(cor(PH, beverage_features[,1:num_predictors])[,],decreasing = TRUE))
-#stack(sort(cor(beverage_features[, num_predictors + 1], beverage_features[,1:num_predictors])[,],decreasing = TRUE))
 ```
 
 
@@ -312,8 +315,6 @@ One problem that can occur with multiple regression and other models is a correl
 # Plot pairwise correlations between Predictors.
 corr.bev <-cor(beverage_features, use = "pairwise.complete.obs", method = 'pearson')
 corrplot(corr.bev, method="color", type = "lower", tl.col = "black", tl.srt = 5)
-
-#corrplot(corr.bev, method = "color",type = "upper", order = "original", number.cex = .6,addCoef.col = "black", tl.srt = 90, diag = TRUE)
 ```
 
 
@@ -339,12 +340,12 @@ Lastly, we want to check for any features that show near zero-variance. Predicto
 ```{r checkZeroVar, echo=FALSE, message=FALSE, warning=FALSE}
 nzv <- nearZeroVar(beverage.train, saveMetrics = TRUE)
 nzv[nzv$nzv,][1:5,] %>% drop_na()
-
-#str(nzv, vec.len = 2)
 ```
 
 Since "Hyd Pressure1" displays near-zero variance, we will drop this feature prior to modeling.
 
+
+\ 
 
 ## 2. Data Preparation
 
@@ -354,6 +355,10 @@ To summarize our data preparation and exploration, we distinguish our findings i
 
 -   `MFR` has more than 8% missing values, so we can remove this predictor.
 -   `Hyd Pressure1` shows little variance, so we can remove this predictor.
+-   We had 4 rows with missing `PH` that need to be removed.
+-   We replace missing values for `Brand Code` with "Unknown".
+-   Impute remaining missing values using `Predictive mean matching` via the `mice` package.
+
 
 ```{r removeTwoVariablesWithMissingData, echo=FALSE, message=FALSE, warning=FALSE}
 # Remove the 2 fields from our training data.
@@ -363,11 +368,6 @@ beverage.train.clean <- beverage.train %>% dplyr::select(-c(MFR, 'Hyd.Pressure1'
 beverage.eval.clean <- beverage.eval %>% dplyr::select(-c(MFR, 'Hyd.Pressure1'))
 ```
 
-
--   We had 4 rows with missing `PH` that need to be removed.
--   We replace missing values for `Brand Code` with "Unknown".
--   Impute remaining missing values using `kNN()` from the `VIM` package
--   We then impute remaining missing values using `kNN()` from the `VIM` package.
 
 ```{r removeRowsWithMissingTarget, echo=FALSE, message=FALSE, warning=FALSE}
 set.seed(200)
@@ -461,17 +461,17 @@ beverage.eval.clean <- beverage.eval.clean %>% dplyr::select(-c('Brand.Code'))
 beverage.eval.clean <- cbind(eval_dummies, beverage.eval.clean)
 ```
 
-### Transform predictors with skewed distributions
+### Transform Predictors With Skewed Distributions
 
-As discussed earlier, some of the predictors are highly skewed. To address this, we scale, center, and apply the Box-Cox transformation to thm using the "preProcess" function from the "caret" package. These transformations should result in more normal distributions.
+As discussed earlier, some of the predictors are highly skewed. To address this, we scale, center, and apply the Box-Cox transformation to them using the "preProcess" function from the "caret" package. These transformations should result in more normal distributions.
 
 ```{r transformPredictors, echo=FALSE, fig.height=14, fig.width=8, message=FALSE, warning=FALSE}
 set.seed(200)
 
-# Drop the target variable PH, since it doesn't need transformation
+# Drop the target variable PH, since it doesn't need transformation.
 bev.train.predictors <- beverage.train.clean %>% dplyr::select(-c(PH))
 
-# The test data doesn't have the PH column
+# The test data doesn't have the PH column.
 bev.eval.predictors <- beverage.eval.clean
 
 # Use caret pre-processing to handle scaling, normalizing and BoxCox transforming the training data.
@@ -498,12 +498,12 @@ ggplot(gather_df) + geom_histogram(aes(x=value, y = ..density..), bins = 30) +
   facet_wrap(. ~variable, scales = 'free', ncol = 4)
 ```
 
-As expected, the plots of the dummy variables are binary. For the others, we can still see bimodal predictors since we did not apply any feature engineering to them. Some predictors such as 'PSC Fill' and 'Temperature' still show some skewness. But we can move on building the models.
+As expected, the plots of the dummy variables are binary. For the others, we can still see bimodal predictors since we did not apply any feature engineering to them. Some predictors such as 'PSC Fill' and 'Temperature' still show some skewness, but we can move on to building the models.
 
 
 ### Pre-Modeling Data Splitting 
 
-We perform a train-test split with a 80:20 ratio.
+Here, we perform a train-test split with a 80:20 ratio.
 
 ```{r premodelingDataSplitting, eval=TRUE, message=FALSE, warning=FALSE}
 # Split the training data into train and test sets using an 80% data split.
@@ -523,7 +523,7 @@ yTestData <- subset(testDataSet, select = PH)
 
 ## Model Building/Fitting 
 
-In this section, we will build and run 3 categories of models: **tree**, **linear**, and **non-linear**. We will then compare the results of the models in each category, select the best category performer, and then select the overall best performer.  
+In this section, we will build and run 3 categories of models: **tree**, **linear**, and **non-linear**. We will then compare the results of the models in each category, select the best category performer, and then select the overall best performer. 
 
 ### Non-Linear Models
 
@@ -702,7 +702,7 @@ singleTreePerformance
 
 
 ```{r appendResultsSingleTree, eval=TRUE, message=FALSE, warning=FALSE}
-# Predict on test data and calculate performance
+# Predict on test data and calculate performance.
 results <- data.frame(t(postResample(pred = singleTreeModelPrediction, obs = yTestData$PH))) %>% mutate(Model = "Single Tree Model") %>% rbind(results)
 
 ```
@@ -758,18 +758,20 @@ Finally, In the tree model category, based on the fact that the **_cubist_** mod
 
 ### Model Summary
 
-We now consolidate the results from all the models the following criteria: root mean squared error (RMSE), R-squared, and mean absolute error. The table below lists these criteria for each model.
+We now consolidate the results from all the models using the following criteria: root mean squared error (RMSE), R-squared, and Mean Absolute Error (MAE). The table below lists these criteria for each model.
 
 ```{r combinePerformanceMetrics, eval=TRUE, message=FALSE, warning=FALSE}
 results %>% dplyr::select(Model, RMSE, Rsquared, MAE)
 
 ```
 
-## Model Selection and top predictors analysis
+\ 
 
-**Based on the RMSE and RSquared values of all the models we ran, the Cubist model is the overall best performer. This can be expected given that this model is more tolerant of multi-collinearity and works well with non-linear features. The Rsquared for the Cubist model tells us that it explains 61% of the data variance which falls within an acceptable RSquared value range. Based on this, we will proceed with the Cubist model as the best predictive model for this project**.
+## Model Selection And Top Predictor Analysis
 
-Let's inspect the predictors that this model found important
+**Based on the RMSE and RSquared values of all the models we ran, the Cubist model is the overall best performer. This is expected given that this model is more tolerant of multi-collinearity and works well with non-linear features. The Rsquared for the Cubist model tells us that it explains 61% of the data variance which falls within an acceptable RSquared value range. Based on this, we will proceed with the Cubist model as the best predictive model for this project**.
+
+Let's inspect the predictors that this model found important.
 
 ```{r checkFeatureImportance, eval=TRUE, message=FALSE, warning=FALSE}
 var.imp.cubist<-varImp(cubistModel, scale = FALSE)
@@ -778,21 +780,11 @@ var.imp.cubist
 ``` 
 
 
-```{r plotFeatureImportance, eval=TRUE, message=FALSE, warning=FALSE}
+Interestingly, we can see that the list of important predictors contains some that had strong correlations (_positive and negative_) with the target variable. For example: _Alch Rel, Bowl Setpoint, Carb Flow, Pressure Vacuum, Oxygen Filler and Mnf Flow_. At the same time, there are other predictors that showed strong correlation with PH, but did not make it to the top 10 important predictors. For example: _Filler Level, Carb Rel, Oxygen Filler, Usage cont, Fill Pressure, Temperature, Pressure Setpoint, Hyd Pressure2 and Hyd Pressure3_.
 
-#plot(varImp(cubistModel, scale = FALSE), top=20)
-#plot(varImp(svmModel, scale = FALSE), top=20)
+Instead, the topmost important predictors had variables such as _Balling Lvl, Bowl Setpoint, Filler Speed and Balling_ in the important predictors list that did not demonstrate the strongest correlations. 
 
-```
-
-Interestingly, we can see that the list of important predictors has some that had strong correlations (positive and negative) with the target variable. For example: Alch Rel, Bowl Setpoint, Carb Flow, Pressure Vacuum, Oxygen Filler and Mnf Flow.
-
-At the same time, there are other predictors that showed strong correlation with PH, but did not make it to the top 10 important predictors. For example: Filler Level, Carb Rel, Oxygen Filler, Usage cont, Fill Pressure, Temperature, Pressure Setpoint, Hyd Pressure2 and Hyd Pressure3.
-
-Instead, the topmost important predictors had variables such as Balling Lvl, Bowl Setpoint, Filler Speed and Balling in the important predictors list that did not demonstrate the strongest correlations. 
-
-This begins to make more sense when we compare to the predictor-predictor correlations calculated previously as well as the results of the vifcor function used previously. We and see that Carb Rel and Alch Rel are strongly correlated as are Alch Rel and Hyd Pressure3. So this indicates that the model is taking into account multi-collinearity and avoiding predictors that are strongly correlated with others that have already been selected and thereby do not provide incremental predictive power.
-
+This begins to make more sense when we compare to the predictor-predictor correlations calculated previously as well as the results of the vifcor function used previously. We can see that Carb Rel and Alch Rel are strongly correlated, as are Alch Rel and Hyd Pressure3. This indicates that the model is taking into account multi-collinearity and avoiding predictors that are strongly correlated with others that have already been selected and thereby do not provide incremental predictive power.
 
 \ 
 
@@ -812,24 +804,31 @@ evaluationDataClean$PH <- round(cubistPredictions,2)
 
 # Take a look at the evaluation data after PH value replacement.
 head(evaluationDataClean, 20) %>% kable() %>% kable_styling() %>% scroll_box(width = '100%', height = '600px')
-
-# Save the final results to a CSV file.
-write.csv(evaluationDataClean, './data/FinalPHPredictions.csv', row.names=F)
 ```
+
+\ 
 
 Looking at the PH column (_the last column_) in the final data sample above, we can see that the empty PH values have now been replaced with our Cubist model predictions.
 
 
 ```{r inspectRangeOfPredictedValues, eval=TRUE, message=FALSE, warning=FALSE}
-# Inspect range of predicted values for evaluation dataset
+# Inspect range of predicted values for evaluation dataset.
 summary(evaluationDataClean$PH)
 histogram(evaluationDataClean$PH)
-
 ```
 
-From the above, we can see that the range of the target variable in the evaluation dataset is slightly narrower than its corresponding range in the training data. This gives us confidence that the model seems to work well on unseen data. Obviously the real accuracy metric would be comparing to the actual PH values for the evaluation data, which we did not have access to.
+From the above, we can see that the range of the target variable in the evaluation dataset is slightly narrower than its corresponding range in the training data. This gives us confidence that the model seems to work well on unseen data. Obviously the real accuracy metric would be to compare the actual PH values for the evaluation data, which we did not have access to. While not perfectly normal, the shape of the distribution of the predicted PH level is reasonably close to normal. 
 
-While not perfectly normal, the shape of the distribution of the predicted PH level is reasonably close to normal.
+
+### Export Final Results As A CSV File
+
+Finally, we will write the final results to a CSV file.
+
+```{r writeToCSV, eval=TRUE, message=FALSE, warning=FALSE}
+# Save the final results to a CSV file.
+write.csv(evaluationDataClean, './data/FinalPHPredictions.csv', row.names=F)
+```
+
 
 ## Conclusion
 
@@ -837,7 +836,7 @@ Based on the exploratory data analysis of the training dataset, we decided to pr
 
 After this, we used 3 categories of models: Linear, Non-linear and Tree-based. We trained 2 models from each category for a total of 6 models. We used a combination of RMSE and R-squared as the performance metrics to decide the final model. We decided to go with the Cubist model because it's metrics were clearly better than the other models. This model has the lowest RMSE and also happens to have the highest r-squared as well. This is not surprising given that these models handle non-linear relationships and multi-collinearity better. This comes across in the list of top predictors selected by this model, as described in a previous section. 
 
-For the final model selected, we see that it considers the following as the top 5 predictors in terms of importance: Mnf.Flow, Alch.Rel, Balling.Lvl, Pressure.Vacuum and Brand Code C. Finding Brand Code as a top predictor is interesting because at the end of the day, Brand is a not a physical/chemical construct that can be linked to PH levels. but we think it must be best encapsulating other chemical features collectively that are in turn helpful in explaining the PH levels. 
+For the final model selected, we see that it considers the following as the top 5 predictors in terms of importance: _Mnf.Flow, Alch.Rel, Balling.Lvl, Pressure.Vacuum and Brand Code C_. Finding Brand Code as a top predictor is interesting because at the end of the day, Brand is a not a physical/chemical construct that can be linked to PH levels. but we think it must be best encapsulating other chemical features collectively that are in turn helpful in explaining the PH levels. 
 
 We see that the range of the predicted values in the evaluation data is in line with the range of the predicted values in the training data, which gives us confidence that the selected model seems generalizable. Besides, the general shape of the distribution of the predicted values is approximately normal. 
 
