@@ -68,6 +68,9 @@ beverage.eval <- read.csv('./data/StudentEvaluation.csv', na.strings = c('', 'NA
 
 \ 
 
+### Remove Empty PH Value From The Evaluation Set
+
+The evaulation dataset contains an empty PH column, so we will remove it for now until it is needed later on in the project.
 
 ```{r loadData, eval=TRUE, message=FALSE, warning=FALSE}
 # Remove the empty PH column from the evaluation data.
@@ -75,6 +78,29 @@ beverage.eval <- beverage.eval %>% dplyr::select(-PH)
 ```
 
 ## Data Exploration
+
+### Evaluation Dataset
+
+The first step in our data exploration is to take a brief look at the evaluation data set. To get an idea of it's structure, we will print out the first 40 rows of the data. 
+
+```{r testgDataStructure, eval=TRUE, message=FALSE, warning=FALSE}
+# Examine the structure of the evaluation dataset.
+head(beverage.eval, 40) %>% kable() %>% kable_styling() %>% scroll_box(width = '100%', height = '600px')
+```
+
+
+We will now check the summary statistics for the data.
+
+```{r checkSummaryStatsEvalData, echo=FALSE, message=FALSE, warning=FALSE}
+# Check summary stats for evaluation data.
+summary(beverage.eval)
+```
+
+
+The summary statistics for the evaluation dataset tell us that it contains missing values so we will need to impute these later on in the project.
+
+We will now examine the training dataset in detail as this is the main dataset that we will be working with throughout the project.
+
 
 ### Training Dataset
 
@@ -91,21 +117,7 @@ str(beverage.train)
 ```
 
 
-The results of running the training data through the _str()_ function reveal that the dataset consists of **33 _Variables_**, and **2571 _Observations_**. Almost all of the variables are numerical, with the exception of the **Brand.Code** variable which is categorical. An other important revelation is that some of the variables contain missing values. 
-
-
-\ 
- 
-
-### Test Dataset
-
-We will now perform the same inspections/conversions on the test dataset. 
-
-```{r testgDataStructure, eval=TRUE, message=FALSE, warning=FALSE}
-# Examine the structure of the evaluation dataset.
-head(beverage.eval, 40) %>% kable() %>% kable_styling() %>% scroll_box(width = '100%', height = '600px')
-```
-
+The results of running the training data through the _str()_ function reveal that the dataset consists of **33 _Columns_**, and **2571 _Observations_**. Almost all of the variables are numerical, with the exception of the **Brand.Code** variable which is categorical. An other important revelation is that some of the variables contain missing values. Let's see how many missing values it contains
 
 The training dataset contains 32 predictor variables which include 1 categorical variable and the rest are numeric (continuous and discrete) variables. There are 2571 records in the training data and 267 records in the evaluation dataset. The target column is PH. 
 
@@ -184,24 +196,14 @@ summary(beverage.train)
 ```
 
 
-```{r checkSummaryStatsEvalData, echo=FALSE, message=FALSE, warning=FALSE}
-# Check summary stats for evaluation data
-summary(beverage.eval)
-```
-
-
-
 ```{r inspectData, echo=FALSE, message=FALSE, warning=FALSE}
-#glimpse(beverage.train)
-#dim(beverage.train)
-#describe(beverage.train)
 introduce(beverage.train)
 ```
 
 
 
 ```{r dataSummary, echo=FALSE, message=FALSE, warning=FALSE}
-# Display summary statistics
+# Display summary statistics.
 skim(beverage.train)
 ```
 
@@ -249,6 +251,7 @@ ggplot(beverage_df) +
   facet_wrap(. ~variable, scales='free', ncol = 4)
 
 ```
+
 
 From the above plots, we can see that a lot of the predictors are significantly skewed, suggesting that we might need to transform the data. Several features are discrete with limited possible values, e.g. `Pressure Setpoint`. We also see a number of bimodal variables such as `Carb Flow`, `Balling`, and `Balling Level`.
 
@@ -795,7 +798,7 @@ This begins to make more sense when we compare to the predictor-predictor correl
 
 ## Predictions
 
-Now that we have identified the **_Cubist_** model as the best predictive model, we will apply the model to the evaluation dataset by replacing the empty **_PH** values in the evaluation dataset with the Cubist model's predictions.
+Now that we have identified the **_Cubist_** model as the best predictive model, we will apply the model to the evaluation dataset by replacing the empty **_PH_** values in the evaluation dataset with the Cubist model's predictions.
 
 ```{r finalPHPreictions, eval=TRUE, message=FALSE, warning=FALSE}
 # Define the "evaluationDataClean" variable.
