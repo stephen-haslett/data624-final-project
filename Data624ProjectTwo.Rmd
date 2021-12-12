@@ -281,7 +281,7 @@ beverage_df %>%
   facet_wrap(. ~variable, scales = 'free', ncol = 6)
 ```
 
-The boxplots reveal outliers, but we don't have have a strong reason to impute or drop them from the dataset. 
+The boxplots reveal outliers, but we don't have a strong reason to impute or drop them from the dataset. 
 
 ### Predictor-Target Correlations
 
